@@ -9,7 +9,6 @@ capacity MUST NOT reappear through MCP overflow refill.
 """
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any, Iterable, Mapping
 from .core import CatalogError, Title, VALID_PLATFORMS, normalized_title_id
 
@@ -20,7 +19,6 @@ SOFTWARE_SLOTS = SOFTWARE_PAGE_COUNT * SOFTWARE_PAGE_SIZE
 MENU_SLOTS = TOOL_PAGE_SIZE + SOFTWARE_SLOTS
 
 _GAME_PLATFORMS = VALID_PLATFORMS - {'homebrew', 'system'}
-_NON_LAUNCHABLE = {'addon', 'system', 'other'}
 
 
 def _valid_id(value: Any) -> str:
@@ -76,7 +74,9 @@ def plan_fixed_menu(
         if type(pos) is not int or not 0 <= pos < TOOL_PAGE_SIZE:
             raise CatalogError('Protected system slot lies outside first page')
         tid = _valid_id(obj.get('title_id'))
-        if pos in () or slot_map[pos] is not None or tid in fixed_ids:
+        if tid[:8] not in {'00050010', '0005001B', '00050030'}:
+            raise CatalogError('Fixed system slot is not a protected system Title ID')
+        if slot_map[pos] is not None or tid in fixed_ids:
             raise CatalogError('Duplicate fixed system slot or title')
         fixed_ids.add(tid)
         slot_map[pos] = {'kind': 'fixed_system', 'position': pos, 'title_id': tid}
