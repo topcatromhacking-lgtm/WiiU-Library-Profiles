@@ -15,7 +15,6 @@
 #include <stdint.h>
 #include <string.h>
 
-WUT_USE_WUT_DEVOPTAB();
 #define MAX_TITLES 10000
 #define OUTPUT_PATH "fs:/vol/external01/wiiu-library-profiles-catalog.json"
 
