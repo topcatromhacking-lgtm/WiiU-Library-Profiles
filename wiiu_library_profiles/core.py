@@ -13,7 +13,7 @@ from typing import Any
 TITLE_ID_RE = re.compile(r'^[0-9A-Fa-f]{16}$')
 VALID_PLATFORMS = frozenset({
     'wiiu', 'wii', 'nes', 'snes', 'n64', 'nds', 'gba', 'gb', 'gbc',
-    'tg16', 'other', 'unclassified', 'system', 'homebrew'
+    'tg16', 'msx', 'other', 'unclassified', 'system', 'homebrew'
 })
 VALID_ORIGINS = frozenset({'native', 'official_vc', 'injection', 'homebrew', 'system', 'unknown'})
 DEFAULT_BUDGET = 280  # Conservative, not an official hardware capacity.
@@ -31,7 +31,39 @@ def normalized_title_id(value: Any) -> str:
     return value.upper()
 
 
-def known_base_category(title_id: str, app_type: str = '') -> tuple[str, str, str]:
+# Wii U ACP product-code *family hints*. These designate the installed
+# Wii U wrapper/emulator, NOT necessarily the actual game in an injection.
+# An injected ROM can inherit all of the donor's ACP metadata.
+def product_code_platform_hint(product_code: str) -> str | None:
+    if not isinstance(product_code,str):
+        return None
+    code = product_code.upper()
+    if re.fullmatch(r'WUP-[PU]-[A-Z0-9]{4}',code):
+        return 'wiiu'
+    match = re.fullmatch(r'WUP-N-([A-Z0-9]{4})',code)
+    if not match:
+        return None
+    family = match.group(1)
+    if family[0] == 'F':
+        return 'nes'
+    if family[0] == 'J':
+        return 'snes'
+    if family[0] == 'N':
+        return 'n64'
+    if family[0] == 'D':
+        return 'nds'
+    if family[0] == 'V':
+        return 'wii'
+    if family[:2] in ('PA','PB','PC','PD'):
+        return 'gba'
+    if family[:2] in ('PN','PP'):
+        return 'tg16'
+    if family[:2] == 'MN':
+        return 'msx'
+    return None
+
+
+def known_base_category(title_id: str, app_type: str = '', product_code: str = '') -> tuple[str, str, str]:
     """Return platform/origin/status, conservatively; injections are unknowable by ID alone."""
     upper = int(title_id[:8], 16)
     if upper in (0x00050010, 0x0005001B, 0x00050030):
@@ -45,7 +77,7 @@ def known_base_category(title_id: str, app_type: str = '') -> tuple[str, str, st
     if app_type.upper() in ('0X8000002E', '8000002E'):
         return 'wii', 'unknown', 'game'
     if upper == 0x00050000:
-        return 'unclassified', 'unknown', 'game'
+        return product_code_platform_hint(product_code) or 'unclassified', 'unknown', 'game'
     return 'unclassified', 'unknown', 'other'
 
 
@@ -118,7 +150,7 @@ def parse_catalog(data: Any, *, overrides: dict | None = None) -> list[Title]:
         if key in seen:
             raise CatalogError(f'Duplicate (title ID, device): {title_id}, {device}')
         seen.add(key)
-        platform, origin, kind = known_base_category(title_id,app_type)
+        platform, origin, kind = known_base_category(title_id,app_type,raw.get('product_code',''))
         ov = cleaned_overrides.get(title_id,{})
         # System titles are always protected; a data file may not reclassify them.
         if kind=='system' and (('platform' in ov and ov['platform'] != 'system') or
