@@ -1,0 +1,25 @@
+{
+  "source": "synthetic-example",
+  "titles": [
+    {
+      "title_id": "0005000010000001",
+      "device": "usb",
+      "app_type": "0x80000000",
+      "title_version": 1,
+      "name": "Example A"
+    },
+    {
+      "title_id": "0005000010000002",
+      "device": "mlc",
+      "app_type": "0x80000000",
+      "title_version": 1,
+      "name": "Example B"
+    },
+    {
+      "title_id": "0005001010040100",
+      "device": "mlc",
+      "app_type": "0x90000001",
+      "title_version": 277
+    }
+  ]
+}
