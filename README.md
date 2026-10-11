@@ -43,7 +43,7 @@ GitHub Actions builds `wiiu_library_profiles_probe.wuhb` and `wiiu_library_profi
 
 ## v0.1.1 read-only game metadata probe
 
-The original v0.1 `wiiu_library_profiles_probe.wuhb` is **unchanged**, and the successful `sd:/wiiu-library-profiles-catalog.json` remains the baseline. The new, separate metadata probe is in `console_probe_metadata/`. Its **Aroma and Tiramisu builds compile in GitHub Actions**, but ACP name retrieval is not yet validated on hardware.
+The original v0.1 `wiiu_library_profiles_probe.wuhb` is **unchanged**, and the successful `sd:/wiiu-library-profiles-catalog.json` remains the baseline. The new, separate metadata probe is in `console_probe_metadata/`. Its **Aroma and Tiramisu builds compile in GitHub Actions**. Real hardware testing returned **511 successful ACP metadata lookups out of 511 base game/application records, zero failures**, with 149 system/update/DLC records intentionally skipped.
 
 The newer build reads all installed records with MCP, requests Wii U's **parsed title metadata from ACP** for base game/application records only, and writes:
 
@@ -62,7 +62,7 @@ This separate file includes the same Title IDs, device, app type, version, and, 
 
 Tiramisu users can instead use the corresponding `.rpx` artifact in the Homebrew Launcher. If every ACP lookup returns `unavailable`, report the `meta_result` errors rather than editing title storage. **Do not enable filesystem write access to Wii U NAND or USB to troubleshoot this version.**
 
-ACP metadata comes from the installed title's metadata but may carry the *donor* game's identity for an injection. It therefore provides useful name and product clues, **not proof of original console or injection origin**. Overrides remain necessary. See [#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4).
+ACP metadata comes from the installed title's metadata but may carry the *donor* game's identity for an injection. It therefore provides useful name and product clues, **not proof of original console or injection origin**. The offline Python parser now assigns preliminary platform **hints** by product-code family (NES, SNES, N64, DS, GBA, PC Engine, MSX, Wii and native Wii U). **Origin remains unknown**, and manual overrides take precedence. See [platform hint rules](docs/PLATFORM_HINTS.md) and [#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4).
 
 ## Launching on a crowded Wii U (>300 visible icons)
 
@@ -85,7 +85,7 @@ Read [architecture and phased testing plan](docs/ARCHITECTURE.md) before advanci
 | Release | Milestone | Current status |
 |---|---|---|
 | v0.1 | Read-only MCP title inventory; offline profile simulation | 660-entry catalog exported on hardware; offline tests passing |
-| v0.1.1 | Read-only ACP game names and metadata | Builds ready, hardware lookup test next ([#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4)) |
+| v0.1.1 | Read-only ACP game names and metadata | 511/511 successful hardware metadata lookups, platform family hints tested ([#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4)) |
 | v0.2 | Menu-scoped `MCP_TitleList` filter for a five-title experiment | Planned ([#3](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/3)) |
 | v0.3 | Switch profiles in Aroma; safe Menu restart / recovery | Planned |
 | v1.0 | Dynamic collections, automatic re-scan and manual injected-game classification | Planned |
