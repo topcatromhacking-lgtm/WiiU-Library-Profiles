@@ -1,0 +1,47 @@
+name: v0.2 five-title Menu filter (experimental)
+
+on:
+  push:
+    branches:
+      - feature/v0.2-five-title-menu-filter
+  pull_request:
+    paths:
+      - "console_menu_filter/**"
+      - "tests/filter_logic_test.c"
+      - ".github/workflows/build-five-title-menu-filter.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-five-title-predicate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and test C predicate with host compiler
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/filter_logic_test.c -o /tmp/wlp_five_filter_test
+          /tmp/wlp_five_filter_test
+      - name: Keep v0.1/v0.1.1 offline tests passing
+        run: python -m unittest discover -s tests -v
+
+  build-disabled-by-default-wups-plugin:
+    needs: test-five-title-predicate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build plugin with pinned Wii U toolchain
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain \
+            -f console_menu_filter/Dockerfile \
+            --target artifacts --output type=local,dest=console_menu_filter/dist .
+          test -s console_menu_filter/dist/wiiu_library_profiles_five_filter.wps
+      - name: Upload experimental WUPS plugin only (no activation marker)
+        uses: actions/upload-artifact@v4
+        with:
+          name: WIIU-LIBRARY-PROFILES-v0.2-FIVE-TITLE-PLUGIN-DISABLED-BY-DEFAULT
+          path: console_menu_filter/dist/wiiu_library_profiles_five_filter.wps
+          if-no-files-found: error
+          retention-days: 14
