@@ -1,5 +1,7 @@
 # v0.2 five-game Wii U Menu filtering experiment
 
+**STOP: ROLLBACK FAILURE OBSERVED ON HARDWARE (2026-10-11).** Stage A (inert plugin) and Stage B (five icons disappear) were successful, but Stage C (removing opt-in marker and cold reboot) failed to restore the original five game icons. The replacement homebrew probe icons remained. **Do not activate the plugin for further tests until we identify why the Menu layout was not restored.** Full plugin rollback is being tested next. Keep Barista backup files intact; do not delete or edit saves or icon ordering. See issue #3 and draft PR #5.
+
 **EXPERIMENTAL, NOT YET VERIFIED ON HARDWARE.** The plug-in is `.wps` (Aroma WUPS), **not** the existing .wuhb metadata probe. It **does not** increase the native Wii U Menu's 300-icon limit. It removes five entries from the in-memory result of `MCP_TitleList` in the Wii U Menu process only. It never removes titles from storage or touches NAND/USB files or saves. There is **no promise** that filtering the MCP list will change visible icons on stock Menu because Barista's persisted layout and other plugins can affect icon behavior.
 
 ## Target set (exact base-game Title IDs)
