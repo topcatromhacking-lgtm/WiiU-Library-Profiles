@@ -39,10 +39,18 @@ jobs:
         run: |
           make -C console_probe
           test -s console_probe/wiiu_library_profiles_probe.wuhb
+          test -s console_probe/wiiu_library_profiles_probe.rpx
       - name: Upload untested Wii U homebrew build
         uses: actions/upload-artifact@v4
         with:
           name: wiiu-library-profiles-catalog-probe-UNTESTED
           path: console_probe/wiiu_library_profiles_probe.wuhb
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Tiramisu Homebrew Launcher RPX build (untested)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiiu-library-profiles-catalog-probe-TIRAMISU-RPX-UNTESTED
+          path: console_probe/wiiu_library_profiles_probe.rpx
           if-no-files-found: error
           retention-days: 14
