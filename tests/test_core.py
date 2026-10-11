@@ -119,7 +119,7 @@ class ProfilesTests(unittest.TestCase):
         self.assertEqual(t.name,'Super Metroid')
         self.assertEqual(t.product_code,'WUP-P-ABCD')
         self.assertEqual(t.meta_status,'ok')
-        self.assertEqual(t.platform,'unclassified')
+        self.assertEqual(t.platform,'wiiu')
         self.assertEqual(t.origin,'unknown')
 
     def test_acp_name_override_and_language_fallback(self):
@@ -136,5 +136,41 @@ class ProfilesTests(unittest.TestCase):
         data={'titles':[{'title_id':id_for(1),'product_code':'A'*33}]}
         with self.assertRaisesRegex(CatalogError,'ACP product'):
             parse_catalog(data)
+
+    def test_wiiu_product_code_family_hints(self):
+        # Fake IDs, representative ACP code patterns; not a user's catalog.
+        families={
+            'WUP-N-FAZZ':'nes', 'WUP-N-JAZZ':'snes',
+            'WUP-N-NAZZ':'n64', 'WUP-N-DAZZ':'nds',
+            'WUP-N-PAZZ':'gba', 'WUP-N-PCZZ':'gba',
+            'WUP-N-PNZZ':'tg16', 'WUP-N-PPZZ':'tg16',
+            'WUP-N-MNZZ':'msx', 'WUP-N-VAZZ':'wii',
+            'WUP-P-AAZZ':'wiiu', 'WUP-U-AAZZ':'wiiu',
+            'WUP-N-ZZZZ':'unclassified'}
+        for i,(code,expected) in enumerate(families.items()):
+            with self.subTest(product_code=code):
+                row={'title_id':id_for(i+1000),'device':'usb',
+                     'app_type':'0x80000000','meta_status':'ok',
+                     'product_code':code,'shortname_en':'Diagnostic'}
+                parsed=parse_catalog({'titles':[row]})[0]
+                self.assertEqual(parsed.platform,expected)
+                self.assertEqual(parsed.origin,'unknown')
+
+    def test_product_code_is_not_proof_of_original_rom_or_origin(self):
+        row={'title_id':id_for(999),'app_type':'0x80000000',
+             'product_code':'WUP-N-JAZZ','meta_status':'ok'}
+        item=parse_catalog({'titles':[row]})[0]
+        self.assertEqual(item.platform,'snes')
+        self.assertEqual(item.origin,'unknown')
+        # If SNES was just a donor, a manual override must take precedence.
+        corrected=parse_catalog({'titles':[row]},overrides={
+            id_for(999):{'platform':'gbc','origin':'injection'}})[0]
+        self.assertEqual((corrected.platform,corrected.origin),('gbc','injection'))
+
+    def test_no_acp_product_code_means_no_platform_guess(self):
+        row={'title_id':id_for(1700),'meta_status':'unavailable',
+             'app_type':'0x80000000','shortname_en':'Metroid'}
+        parsed=parse_catalog({'titles':[row]})[0]
+        self.assertEqual(parsed.platform,'unclassified')
 
 if __name__=='__main__': unittest.main()
