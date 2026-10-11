@@ -54,3 +54,32 @@ jobs:
           path: console_probe/wiiu_library_profiles_probe.rpx
           if-no-files-found: error
           retention-days: 14
+
+  build-metadata-probe:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:20260503
+    env:
+      DEVKITPRO: /opt/devkitpro
+      DEVKITPPC: /opt/devkitpro/devkitPPC
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build read-only ACP metadata probe
+        run: |
+          make -C console_probe_metadata
+          test -s console_probe_metadata/wiiu_library_profiles_metadata_probe.wuhb
+          test -s console_probe_metadata/wiiu_library_profiles_metadata_probe.rpx
+      - name: Upload Aroma v0.1.1 metadata probe (untested)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiiu-library-profiles-v011-ACP-metadata-AROMA-UNTESTED
+          path: console_probe_metadata/wiiu_library_profiles_metadata_probe.wuhb
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Tiramisu v0.1.1 metadata probe (untested)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiiu-library-profiles-v011-ACP-metadata-TIRAMISU-UNTESTED
+          path: console_probe_metadata/wiiu_library_profiles_metadata_probe.rpx
+          if-no-files-found: error
+          retention-days: 14
