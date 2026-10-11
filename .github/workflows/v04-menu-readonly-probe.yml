@@ -1,0 +1,44 @@
+name: v0.4 Menu hook visibility diagnostic (READ ONLY)
+
+on:
+  push:
+    branches:
+      - feature/v0.4-menu-allowlist-preflight
+  pull_request:
+    paths:
+      - "console_menu_allowlist_probe/**"
+      - ".github/workflows/v04-menu-readonly-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run existing planner + homebrew regression suite
+        run: python -m unittest discover -s tests -v
+
+  build-readonly-plugin:
+    needs: offline-regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned WUPS module with Docker
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain \
+            -f console_menu_allowlist_probe/Dockerfile \
+            --target artifacts --output type=local,dest=console_menu_allowlist_probe/dist .
+          test -s console_menu_allowlist_probe/dist/wiiu_library_profiles_v04_readonly_probe.wps
+      - name: Upload inert, read-only plugin binary (no marker)
+        uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v04-READONLY-HOOK-VISIBILITY-PROBE-DISABLED
+          path: console_menu_allowlist_probe/dist/wiiu_library_profiles_v04_readonly_probe.wps
+          if-no-files-found: error
+          retention-days: 14
