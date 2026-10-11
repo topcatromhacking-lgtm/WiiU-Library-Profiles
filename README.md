@@ -41,6 +41,16 @@ make
 
 The intended output is `wiiu_library_profiles_probe.wuhb`. This code has **not** been compiled in the development environment or tested on a Wii U. Review it and confirm your local WUT version before using it. The probe reads MCP title records and writes only a catalog JSON to the SD root. It does not touch NAND, Barista account saves, installed titles or the Menu executable.
 
+## Launching on a crowded Wii U (>300 visible icons)
+
+The `.wuhb` build requires Aroma and may be inaccessible if the Nintendo Menu has already hit the 300-icon limit. The **same read-only probe** is also packaged by GitHub Actions as `wiiu_library_profiles_probe.rpx` for **Tiramisu's Homebrew Launcher**. A successful CI build is **not** hardware validation.
+
+- **Tiramisu:** Download the `wiiu-library-profiles-catalog-probe-TIRAMISU-RPX-UNTESTED` Actions artifact. Place `wiiu_library_profiles_probe.rpx` in `sd:/wiiu/apps/wiiu_library_profiles_probe/`, boot the Tiramisu environment, open **Mii Maker** to enter Homebrew Launcher, and select the probe. Homebrew Launcher uses `.rpx` or `.elf`; the Aroma `.wuhb` is not a drop-in replacement there.
+- **Aroma:** If the `wiiload_plugin` is installed, send the existing `.wuhb` from a PC with devkitPro's `wiiload` utility (set `WIILOAD=tcp:192.168.1.75`, replacing with your console IP). Wiiload does not require a spare Menu icon.
+- **NUSspli does not run arbitrary `.wuhb` homebrew**. Do not attempt to install the probe as a NAND title.
+
+Both builds should export `sd:/wiiu-library-profiles-catalog.json` when run successfully. They perform no NAND writes or Menu patches. If export fails, note the exact on-screen error; the code remains experimental. **Keep your unmodified 300+ title and multi-user workaround in place.**
+
 ## Safety and scope
 
 No silent truncation of selected libraries beyond a conservative 280-entry budget. No Title ID-based automatic assumptions about VC injections. No changes to original Menu / NAND / Barista saves in v0.1. Keep system and recovery tools accessible and retain backups of your existing multi-user arrangement.
