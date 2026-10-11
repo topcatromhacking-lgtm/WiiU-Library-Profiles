@@ -111,4 +111,30 @@ class ProfilesTests(unittest.TestCase):
         self.assertEqual(r['visible_count'],0)
         self.assertEqual(r['hidden_count'],511)
 
+    def test_acp_metadata_names_are_used_without_guessing_vc_origin(self):
+        t=parse_catalog({'titles':[{'title_id':id_for(25),'device':'usb',
+            'app_type':'0x80000000','shortname_en':'Super Metroid',
+            'shortname_es':'Metroid', 'meta_status':'ok',
+            'product_code':'WUP-P-ABCD','content_platform':'WUP','region':2}]})[0]
+        self.assertEqual(t.name,'Super Metroid')
+        self.assertEqual(t.product_code,'WUP-P-ABCD')
+        self.assertEqual(t.meta_status,'ok')
+        self.assertEqual(t.platform,'unclassified')
+        self.assertEqual(t.origin,'unknown')
+
+    def test_acp_name_override_and_language_fallback(self):
+        data={'titles':[{'title_id':id_for(3),'device':'usb',
+                         'meta_status':'ok','shortname_ja':'日本語'},
+                        {'title_id':id_for(4),'device':'usb',
+                         'meta_status':'unavailable'}]}
+        parsed=parse_catalog(data,overrides={id_for(3):{'name':'Override'}})
+        self.assertEqual(parsed[0].name,'Override')
+        self.assertEqual(parsed[1].name,'')
+        self.assertEqual(parse_catalog(data)[0].name,'日本語')
+
+    def test_acp_metadata_rejects_malformed_product_code(self):
+        data={'titles':[{'title_id':id_for(1),'product_code':'A'*33}]}
+        with self.assertRaisesRegex(CatalogError,'ACP product'):
+            parse_catalog(data)
+
 if __name__=='__main__': unittest.main()
