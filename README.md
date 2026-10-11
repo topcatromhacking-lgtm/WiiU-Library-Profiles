@@ -41,6 +41,29 @@ make
 
 GitHub Actions builds `wiiu_library_profiles_probe.wuhb` and `wiiu_library_profiles_probe.rpx` with devkitPro. The `.wuhb` was **successfully tested on a Wii U** using Aroma Homebrew Loader; the RPX has been built but not separately hardware-validated. Review it and confirm your local WUT version before using it. The probe reads MCP title records and writes only a catalog JSON to the SD root. It does not touch NAND, Barista account saves, installed titles or the Menu executable.
 
+## v0.1.1 read-only game metadata probe
+
+The original v0.1 `wiiu_library_profiles_probe.wuhb` is **unchanged**, and the successful `sd:/wiiu-library-profiles-catalog.json` remains the baseline. The new, separate metadata probe is in `console_probe_metadata/`. Its **Aroma and Tiramisu builds compile in GitHub Actions**, but ACP name retrieval is not yet validated on hardware.
+
+The newer build reads all installed records with MCP, requests Wii U's **parsed title metadata from ACP** for base game/application records only, and writes:
+
+```text
+sd:/wiiu-library-profiles-metadata-v011.json
+```
+
+This separate file includes the same Title IDs, device, app type, version, and, for successful ACP lookups, localized English, Spanish and Japanese names, product code, content platform, region and Menu flags. Each record has `meta_status` (`ok`, `unavailable`, or `skipped`). Unreadable titles do not abort the scan. No private catalog should be committed to GitHub.
+
+**Aroma hardware test:**
+
+1. Download the `wiiu-library-profiles-v011-ACP-metadata-AROMA-UNTESTED` artifact from the build run (GitHub Actions).
+2. Put `wiiu_library_profiles_metadata_probe.wuhb` in `sd:/wiiu/apps/wiiu_library_profiles_metadata_probe/`, alongside but separate from the original probe.
+3. In Aroma, use your installed **Homebrew Loader** shortcut `L + R + D-Pad Down` to launch the metadata probe without needing a free Wii U Menu icon.
+4. After its status screen reports success, press HOME, and retrieve the new JSON from the SD root (e.g. FileZilla FTP). Compare `total_records` with the first probe's total before continuing.
+
+Tiramisu users can instead use the corresponding `.rpx` artifact in the Homebrew Launcher. If every ACP lookup returns `unavailable`, report the `meta_result` errors rather than editing title storage. **Do not enable filesystem write access to Wii U NAND or USB to troubleshoot this version.**
+
+ACP metadata comes from the installed title's metadata but may carry the *donor* game's identity for an injection. It therefore provides useful name and product clues, **not proof of original console or injection origin**. Overrides remain necessary. See [#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4).
+
 ## Launching on a crowded Wii U (>300 visible icons)
 
 The `.wuhb` build requires Aroma and may be inaccessible if the Nintendo Menu has already hit the 300-icon limit. The **same read-only probe** is also packaged by GitHub Actions as `wiiu_library_profiles_probe.rpx` for **Tiramisu's Homebrew Launcher**. A successful CI build is **not** hardware validation.
@@ -62,7 +85,7 @@ Read [architecture and phased testing plan](docs/ARCHITECTURE.md) before advanci
 | Release | Milestone | Current status |
 |---|---|---|
 | v0.1 | Read-only MCP title inventory; offline profile simulation | 660-entry catalog exported on hardware; offline tests passing |
-| v0.1.1 | Read-only name/metadata scan for better platform labeling | Planned ([#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4)) |
+| v0.1.1 | Read-only ACP game names and metadata | Builds ready, hardware lookup test next ([#4](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/4)) |
 | v0.2 | Menu-scoped `MCP_TitleList` filter for a five-title experiment | Planned ([#3](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/issues/3)) |
 | v0.3 | Switch profiles in Aroma; safe Menu restart / recovery | Planned |
 | v1.0 | Dynamic collections, automatic re-scan and manual injected-game classification | Planned |
