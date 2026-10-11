@@ -1,0 +1,10 @@
+{
+  "name": "SNES Virtual Console and injections",
+  "platforms": [
+    "snes"
+  ],
+  "origins": [],
+  "tags": [],
+  "include_ids": [],
+  "exclude_ids": []
+}

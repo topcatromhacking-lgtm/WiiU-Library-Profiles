@@ -1,0 +1,15 @@
+{
+  "0005000010000001": {
+    "name": "Example SNES Injection",
+    "platform": "snes",
+    "origin": "injection",
+    "tags": [
+      "favorites"
+    ]
+  },
+  "0005000010000002": {
+    "name": "Example Native Wii U Game",
+    "platform": "wiiu",
+    "origin": "native"
+  }
+}
