@@ -33,18 +33,30 @@ continue to be passed through to MCP but **are not game icons**.
 
 ## A previously hidden constraint verified against real Barista saves
 
-The user's two historic 130,116-byte Barista saves contain:
+The user's two supplied 130,116-byte Barista saves contain:
 - Barista 1: 8 protected system records at positions 0-7, then 9 Homebrew
   records at positions 8-16. Games start at position 17.
 - Barista 2: 8 protected system records at positions 0-7, then 7 Homebrew
   records at positions 8-14. Games start at position 15.
 
+**User clarification (2026-10-11): the two extra Homebrew records in
+Barista 1 are the two catalog probes built by this project.** They
+appeared in the v0.2 filter experiment, replacing the visible
+007 Legends and 1001 Spikes icons. They were **not** two additional
+Homebrew tools the user had intentionally reserved in the original
+Menu. Do not interpret Barista 1's nine Homebrew records as the user's
+historical base tool selection; it reflects the *post-filter* state.
+Barista 2's seven entries describe the original planned tool count.
+
 Therefore **15 reserved Menu positions cannot mean 15 discretionary
 Homebrew apps on this console**. They include 8 mandatory system entries,
-leaving 7 explicitly selected Homebrew/tool slots. Barista 1 requires moving
-or excluding 2 existing Homebrew icons outside that first page before we
-can claim a first-page-only tools layout. The Menu's Homebrew Loader
-shortcut (L+R+D-Pad Down) must remain available for others.
+leaving 7 explicitly selected Homebrew/tool slots. On rebuild the two
+probes should be treated as **optional selectable tools**, just like
+any other SD homebrew, not as permanently protected or essential first
+page entries. If the user selects both, they displace two *other*
+optional tools within the seven discretionary slots. The Menu's
+Homebrew Loader shortcut (L+R+D-Pad Down) remains available for any
+additional tools.
 
 On other hardware/regions, the number, identity and positions of protected
 entries must be scanned from that user's Barista save. If protected items
@@ -81,8 +93,11 @@ any Wii U save or title inventory.
 
 1. Validate Homebrew-on-Menu synthetic Menu title enumeration and stable
    SD-path-to-Title-ID matching.
-2. Validate folder placeholders and safe first-page allocation, including
-   relocating Homebrew icons from positions 15 and 16 in historic Barista 1.
+2. Validate folder placeholders and safe first-page allocation.
+   Remove the two **post-filter probe** entries from Barista 1's
+   excess positions 15 and 16 in the *candidate layout only*,
+   unless explicitly chosen for two of the seven selectable first-page
+   tool positions. Do not remove the underlying SD homebrew applications.
 3. Build Barista files offline against a *same-console, same-region* known
    template, with checksums and explicit protected-field checks.
 4. Match the Menu-scoped hook to the **same exact allowlist** used by the
