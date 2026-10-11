@@ -60,6 +60,11 @@ class Title:
     origin: str
     kind: str
     tags: tuple[str, ...] = ()
+    # Diagnostic ACP fields, not grounds to declare an injection "official".
+    meta_status: str = 'unknown'
+    product_code: str = ''
+    content_platform: str = ''
+    region: int | None = None
 
     def as_dict(self) -> dict:
         obj = asdict(self)
@@ -121,15 +126,31 @@ def parse_catalog(data: Any, *, overrides: dict | None = None) -> list[Title]:
             raise CatalogError(f'Cannot override system title class: {title_id}')
         platform=ov.get('platform',platform)
         origin=ov.get('origin',origin)
-        name=ov.get('name',raw.get('name',''))
+        # ACP metadata is an optional, untrusted *label*, never a platform decision.
+        name=ov.get('name')
+        if name is None:
+            candidates=(raw.get('name'),raw.get('shortname_en'),raw.get('shortname_es'),
+                        raw.get('shortname_ja'),raw.get('longname_en'),raw.get('longname_es'))
+            name=next((n for n in candidates if isinstance(n,str) and n.strip()),'')
         tags=ov.get('tags',raw.get('tags',[]))
+        meta_status=raw.get('meta_status','unknown')
+        product_code=raw.get('product_code','')
+        content_platform=raw.get('content_platform','')
+        region=raw.get('region',None)
+        if meta_status not in ('ok','unavailable','skipped','unknown') or not isinstance(meta_status,str):
+            raise CatalogError(f'Invalid ACP metadata status: {title_id}')
+        if not isinstance(product_code,str) or len(product_code)>32 or not isinstance(content_platform,str) or len(content_platform)>32:
+            raise CatalogError(f'Invalid ACP product/platform strings: {title_id}')
+        if region is not None and (type(region) is not int or not 0 <= region <= 0xFFFFFFFF):
+            raise CatalogError(f'Invalid ACP region: {title_id}')
         if platform not in VALID_PLATFORMS or origin not in VALID_ORIGINS:
             raise CatalogError(f'Invalid platform or origin classification: {title_id}')
         if not isinstance(name,str) or len(name)>256:
             raise CatalogError('Invalid game name')
         if not isinstance(tags,list) or len(tags)>32 or any(not isinstance(t,str) or len(t)>60 for t in tags):
             raise CatalogError('Invalid tags')
-        titles.append(Title(title_id,device,app_type,version,name,platform,origin,kind,tuple(tags)))
+        titles.append(Title(title_id,device,app_type,version,name,platform,origin,kind,tuple(tags),
+                            meta_status,product_code,content_platform,region))
     return titles
 
 
