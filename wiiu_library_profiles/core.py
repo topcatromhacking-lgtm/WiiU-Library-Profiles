@@ -34,7 +34,8 @@ def normalized_title_id(value: Any) -> str:
 def known_base_category(title_id: str, app_type: str = '') -> tuple[str, str, str]:
     """Return platform/origin/status, conservatively; injections are unknowable by ID alone."""
     upper = int(title_id[:8], 16)
-    if upper == 0x00050010:
+    if upper in (0x00050010, 0x0005001B, 0x00050030):
+        # OS applications, system data and overlay applets are never profile targets.
         return 'system', 'system', 'system'
     if upper == 0x0005000F:  # Synthetic Homebrew-on-Menu titles
         return 'homebrew', 'homebrew', 'application'
@@ -167,9 +168,17 @@ def preview(titles: list[Title], profile: dict, *, budget: int = DEFAULT_BUDGET)
     if allow_ids & deny_ids:
         raise CatalogError('A title cannot be both included and excluded')
     selected=[]
+    pass_through=0
+    launchable=0
     for entry in titles:
-        protected = entry.kind == 'system' or entry.platform=='homebrew'
-        # System and homebrew remain visible regardless of custom exclusions.
+        # Preserve updates, DLC, OS apps, shared data and overlay applets in
+        # any future MCP hook. These records do NOT consume Wii U Menu slots.
+        if entry.kind not in ('game', 'application'):
+            pass_through += 1
+            continue
+        launchable += 1
+        protected = entry.platform == 'homebrew'
+        # Homebrew remains selectable regardless of custom exclusions.
         # Platform and origin are conjunctive facets; tags and explicit IDs
         # are additive shortcuts for personal collections (e.g. Favorites).
         facet_match = bool(platforms or origins) and (not platforms or entry.platform in platforms) and (not origins or entry.origin in origins)
@@ -180,7 +189,9 @@ def preview(titles: list[Title], profile: dict, *, budget: int = DEFAULT_BUDGET)
     if len(selected)>budget:
         raise CatalogError(f'Profile {name!r} has {len(selected)} entries, exceeds budget {budget}. '
                            'Split the view into smaller subcategories; nothing was discarded.')
-    return {'name':name,'total_installed_records':len(titles),'visible_count':len(selected),
-            'hidden_count':len(titles)-len(selected),'budget':budget,'remaining':budget-len(selected),
+    return {'name':name,'total_installed_records':len(titles),
+            'launchable_record_count':launchable, 'pass_through_record_count':pass_through,
+            'visible_count':len(selected), 'hidden_count':launchable-len(selected),
+            'budget':budget,'remaining':budget-len(selected),
             'titles':[t.as_dict() for t in selected],
-            'note':'Offline preview only; no console filtering, sorting, or save modification.'}
+            'note':'Offline preview only. Nonlaunchable MCP records are pass-through, not Menu icons; no console modifications.'}
