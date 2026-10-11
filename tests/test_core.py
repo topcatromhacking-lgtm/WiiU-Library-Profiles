@@ -37,7 +37,9 @@ class ProfilesTests(unittest.TestCase):
         base=source(1)
         base['titles'].append({'title_id':'0005001010040100','device':'mlc','app_type':'0x90000001'})
         r=preview(parse_catalog(base),{'name':'None','platforms':[]})
-        self.assertEqual([t['title_id'] for t in r['titles']],['0005001010040100'])
+        self.assertEqual(r['visible_count'],0)
+        self.assertEqual(r['pass_through_record_count'],1)
+        self.assertEqual(r['launchable_record_count'],1)
 
     def test_duplicate_device_title_rejected(self):
         data=source(1);data['titles'].append(dict(data['titles'][0]))
@@ -75,6 +77,38 @@ class ProfilesTests(unittest.TestCase):
     def test_exclusion_cannot_hide_system(self):
         data={'titles':[{'title_id':'0005001010040100'}]}
         r=preview(parse_catalog(data),{'name':'Empty','exclude_ids':['0005001010040100']})
-        self.assertEqual(r['visible_count'],1)
+        self.assertEqual(r['visible_count'],0)
+        self.assertEqual(r['pass_through_record_count'],1)
+
+    def test_system_data_and_overlay_protected_from_reclassification(self):
+        for prefix in ('00050010','0005001B','00050030'):
+            tid=prefix+'10040100'
+            with self.subTest(prefix=prefix):
+                with self.assertRaisesRegex(CatalogError,'system'):
+                    parse_catalog({'titles':[{'title_id':tid}]},overrides={tid:{'platform':'snes'}})
+
+    def test_nonlaunchable_ids_are_not_menu_icons_even_if_explicitly_included(self):
+        ids=['0005000C10000100','0005000E10000100',
+             '0005001010040100','0005001B10042300','000500301001010A']
+        catalog={'titles':[{'title_id':tid} for tid in ids]}
+        r=preview(parse_catalog(catalog),{'name':'Nonlaunchable','include_ids':ids})
+        self.assertEqual(r['visible_count'],0)
+        self.assertEqual(r['pass_through_record_count'],5)
+        self.assertEqual(r['hidden_count'],0)
+
+    def test_mixed_660_record_inventory_budget_counts_only_games(self):
+        # Synthetic layout matching an observed 660-record console, not real IDs.
+        records=source(511)['titles']
+        groups=[('0005000C',26),('0005000E',68),('00050010',19),
+                ('0005001B',20),('00050030',16)]
+        for upper,count in groups:
+            records.extend({'title_id':f'{upper}{i:08X}'} for i in range(count))
+        t=parse_catalog({'titles':records})
+        self.assertEqual(len(t),660)
+        r=preview(t,{'name':'None'})
+        self.assertEqual(r['launchable_record_count'],511)
+        self.assertEqual(r['pass_through_record_count'],149)
+        self.assertEqual(r['visible_count'],0)
+        self.assertEqual(r['hidden_count'],511)
 
 if __name__=='__main__': unittest.main()
