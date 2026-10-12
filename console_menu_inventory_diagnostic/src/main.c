@@ -37,7 +37,7 @@ static bool checked=false,active=false,loaded=false,valid[2]={false,false};
 static bool history_header=false,have_best=false,have_last=false;
 static uint32_t inspected=0,events=0;
 static uint32_t best_missing=0,best_base=0;
-static uint32_t last_count=0,last_base=0,last_homebrew=0,last_missing=0;
+static uint32_t last_count=0,last_base=0,last_prefix=0,last_homebrew=0,last_missing=0;
 
 static bool in_menu(void){
   uint64_t t=OSGetTitleID();
@@ -63,22 +63,22 @@ static bool load_file(const char *path,wlp_allowlist *out){
   return wlp_parse_allowlist(buffer,n,out)!=0;
 }
 static void log_history(
-    uint32_t call_id,uint32_t n,uint32_t capacity,uint32_t base,
+    uint32_t call_id,uint32_t n,uint32_t capacity,uint32_t base,uint32_t prefix,
     uint32_t synthetic,uint32_t addons,
     const wlp_dry_stats *w,const wlp_dry_stats *e){
   if(events>=MAX_HISTORY_EVENTS)return;
   FILE *f=fopen(REPORT_PATH,history_header?"ab":"wb");
   if(!f)return;
   if(!history_header){
-    fputs("call,menu_records,buffer_capacity,base_game_records,"
+    fputs("call,menu_records,buffer_capacity,recognized_game_app_type_records,all_00050000_prefix_records,"
           "synthetic_homebrew,updates_dlc,wiiu_found,wiiu_missing,"
           "nes_found,nes_missing,selected_hb_found_wiiu,"
           "selected_hb_missing_wiiu,selected_hb_found_nes,"
           "selected_hb_missing_nes\n",f);
   }
-  fprintf(f,"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+  fprintf(f,"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
       (unsigned long)call_id,(unsigned long)n,(unsigned long)capacity,
-      (unsigned long)base,(unsigned long)synthetic,(unsigned long)addons,
+      (unsigned long)base,(unsigned long)prefix,(unsigned long)synthetic,(unsigned long)addons,
       (unsigned long)w->present_game,(unsigned long)w->missing_game,
       (unsigned long)e->present_game,(unsigned long)e->missing_game,
       (unsigned long)w->present_homebrew,(unsigned long)w->missing_homebrew,
@@ -125,7 +125,7 @@ ON_APPLICATION_START(){
   valid[0]=valid[1]=false;
   memset(manifests,0,sizeof(manifests));
   inspected=events=best_missing=best_base=0;
-  last_count=last_base=last_homebrew=last_missing=0;
+  last_count=last_base=last_prefix=last_homebrew=last_missing=0;
   history_header=have_best=have_last=false;
 }
 DECL_FUNCTION(int32_t,MCP_TitleList,
@@ -152,11 +152,12 @@ DECL_FUNCTION(int32_t,MCP_TitleList,
   ++inspected;
   wlp_observed *list=malloc((size_t)count*sizeof(*list));
   if(!list)return rc;
-  uint32_t base=0,homebrew=0,addons=0;
+  uint32_t base=0,prefix=0,homebrew=0,addons=0;
   for(uint32_t i=0;i<count;i++){
     list[i].tid=titles[i].titleId;
     list[i].app_type=(uint32_t)titles[i].appType;
     uint32_t hi=(uint32_t)(list[i].tid>>32);
+    if(hi==UINT32_C(0x00050000))prefix++;
     if(wlp_is_base_game(list[i].tid,list[i].app_type))base++;
     else if(wlp_is_synthetic(list[i].tid))homebrew++;
     else if(hi==UINT32_C(0x0005000c)||hi==UINT32_C(0x0005000e))addons++;
@@ -165,15 +166,15 @@ DECL_FUNCTION(int32_t,MCP_TitleList,
   wlp_dry_stats n=wlp_dry_evaluate(&manifests[1],list,count);
   uint32_t missing=w.missing_game+w.missing_homebrew+
                     n.missing_game+n.missing_homebrew;
-  if(!have_last||last_count!=count||last_base!=base||
+  if(!have_last||last_count!=count||last_base!=base||last_prefix!=prefix||
      last_homebrew!=homebrew||last_missing!=missing){
-    log_history(inspected,count,capacity,base,homebrew,addons,&w,&n);
-    last_count=count;last_base=base;
+    log_history(inspected,count,capacity,base,prefix,homebrew,addons,&w,&n);
+    last_count=count;last_base=base;last_prefix=prefix;
     last_homebrew=homebrew;last_missing=missing;have_last=true;
   }
-  if(wlp_better_snapshot(have_best,missing,base,best_missing,best_base)){
+  if(wlp_better_snapshot(have_best,missing,prefix,best_missing,best_base)){
     write_missing_ids(inspected,list,count);
-    best_missing=missing;best_base=base;have_best=true;
+    best_missing=missing;best_base=prefix;have_best=true;
   }
   free(list);
   /* Deliberately no modification to titles, count, or original rc. */
