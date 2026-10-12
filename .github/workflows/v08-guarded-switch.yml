@@ -1,8 +1,9 @@
-name: v0.8 Experimental guarded profile filter (disabled by default)
+name: v0.8.1 Hash-advisory account-guarded Menu filter
 on:
   push:
     branches:
       - feature/v0.8-guarded-profile-switch
+      - feature/v0.8.1-barista-hash-advisory
   pull_request:
     paths:
       - 'console_menu_profile_switch/**'
@@ -29,10 +30,10 @@ jobs:
       - name: Build guarded WUPS plugin with pinned toolchain
         run: |
           DOCKER_BUILDKIT=1 docker build --progress=plain -f console_menu_profile_switch/Dockerfile --target artifacts --output type=local,dest=console_menu_profile_switch/dist .
-          test -s console_menu_profile_switch/dist/wiiu_library_profiles_v08_guarded.wps
+          test -s console_menu_profile_switch/dist/wiiu_library_profiles_v081_hash_advisory.wps
       - uses: actions/upload-artifact@v4
         with:
-          name: WLP-v08-GUARDED-PLUGIN-INERT-WITHOUT-MARKER
-          path: console_menu_profile_switch/dist/wiiu_library_profiles_v08_guarded.wps
+          name: WLP-v081-HASH-ADVISORY-PLUGIN
+          path: console_menu_profile_switch/dist/wiiu_library_profiles_v081_hash_advisory.wps
           if-no-files-found: error
           retention-days: 14
