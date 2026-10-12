@@ -3,7 +3,7 @@ $(error DEVKITPRO is required)
 endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/wups/share/wups_rules
-TARGET := wiiu_library_profiles_v08_guarded
+TARGET := wiiu_library_profiles_v081_hash_advisory
 BUILD := build
 SOURCES := src
 INCLUDES := src

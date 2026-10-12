@@ -1,8 +1,8 @@
 /*
- * Wii U Library Profiles v0.8: tightly guarded Menu-only title filter.
- * Disabled until exact SD marker; binds current account, selected WLPA
- * manifest SHA256 to the exact redirected Barista account save.
- * Returns the original in-memory MCP list untouched on ANY validation error.
+ * Wii U Library Profiles v0.8.1: account-guarded, hash-tolerant Menu filter.
+ * Disabled until exact SD marker; binds to current account and selected
+ * validated WLPA manifest. Barista SHA256 is advisory only: Menu can rewrite
+ * its save without disabling profile filtering. All mandatory checks fail-open.
  * No NAND, USB, installation, or Barista writes.
  */
 #include <wups.h>
@@ -17,9 +17,9 @@
 #include "wlp_filter_core.h"
 #include "wlp_sha256.h"
 
-WUPS_PLUGIN_NAME("Library Profiles v08 GUARDED");
+WUPS_PLUGIN_NAME("Library Profiles v081 HASH ADVISORY");
 WUPS_PLUGIN_DESCRIPTION("EXPERIMENTAL account-bound Menu title allowlist; SD opt-in");
-WUPS_PLUGIN_VERSION("v0.8.0-experimental");
+WUPS_PLUGIN_VERSION("v0.8.1-experimental");
 WUPS_PLUGIN_AUTHOR("TopCat");
 WUPS_PLUGIN_LICENSE("MIT");
 WUPS_USE_WUT_DEVOPTAB();
@@ -30,7 +30,7 @@ WUPS_USE_WUT_DEVOPTAB();
 #define CONFIG ROOT "/active-profile.cfg"
 #define REPORT ROOT "/v08-menu-report.csv"
 #define BARISTA_SIZE 130116u
-static bool checked=false,enabled=false,manifest_ok=false,account_ok=false,save_ok=false,reported=false;
+static bool checked=false,enabled=false,manifest_ok=false,account_ok=false,barista_hash_match=false,reported=false;
 static uint32_t target_account=0;
 static char profile[8]={0},serial[32]={0};
 static wlp_manifest selection={0};
@@ -104,22 +104,24 @@ static void initialize_once(){
  manifest_ok=true;
  if(!current_account_matches()){status="WRONG_ACCOUNT";return;}
  account_ok=true;
- if(!check_save_digest()){status="BARISTA_HASH_MISMATCH";return;}
- save_ok=true;status="READY";
+ /* Menu regularly rewrites Barista after game exit/cold boot. This check is
+  * strictly diagnostic: an altered/missing save must NOT re-expose titles. */
+ barista_hash_match=check_save_digest();
+ status="READY";
 }
 static void report(uint32_t call_count,uint32_t cap,const wlp_scan*s,const char *result){
  if(reported)return;reported=true;
  FILE*f=fopen(REPORT,"wb");if(!f)return;
- fputs("status,account,profile,records,capacity,expected_games,found_games,expected_homebrew,found_homebrew,would_hide_games,would_hide_homebrew\n",f);
- fprintf(f,"%s,%08lX,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",result,
- (unsigned long)target_account,profile,(unsigned long)call_count,(unsigned long)cap,
+ fputs("plugin_version,status,account,profile,barista_hash,records,capacity,expected_games,found_games,expected_homebrew,found_homebrew,would_hide_games,would_hide_homebrew\n",f);
+ fprintf(f,"0.8.1,%s,%08lX,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",result,
+ (unsigned long)target_account,profile,barista_hash_match?"MATCH":"MISMATCH_OR_UNAVAILABLE",(unsigned long)call_count,(unsigned long)cap,
  (unsigned long)s->required_games,(unsigned long)s->found_games,
  (unsigned long)s->required_homebrew,(unsigned long)s->found_homebrew,
  (unsigned long)s->hide_games,(unsigned long)s->hide_homebrew);
  fclose(f);
 }
 ON_APPLICATION_START(){
- checked=enabled=manifest_ok=account_ok=save_ok=reported=false;
+ checked=enabled=manifest_ok=account_ok=barista_hash_match=reported=false;
  target_account=0;profile[0]=serial[0]=0;status="NOT_ENABLED";
  memset(&selection,0,sizeof(selection));
 }
@@ -129,7 +131,7 @@ DECL_FUNCTION(int32_t,MCP_TitleList,uint32_t handle,uint32_t*outCount,MCPTitleLi
  if(!checked)initialize_once();
  if(!enabled)return rc;
  wlp_scan empty={0};
- if(!manifest_ok||!account_ok||!save_ok){report(0,0,&empty,status);return rc;}
+ if(!manifest_ok||!account_ok){report(0,0,&empty,status);return rc;}
  if(!current_account_matches()){report(0,0,&empty,"ACCOUNT_CHANGED");return rc;}
  if(rc!=0||!list||!outCount)return rc;
  uint32_t count=*outCount,cap=size/sizeof(MCPTitleListType);
