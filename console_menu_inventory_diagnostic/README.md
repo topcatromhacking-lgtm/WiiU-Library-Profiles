@@ -5,7 +5,7 @@ The v0.4.1 read-only hardware CSV returned:
 | Metric | v0.4 hook test | v0.4.1 allowlist test |
 |---|---:|---:|
 | Valid Menu MCP records | 586 | 556 |
-| Base-game records | 511 | 492 |
+| Count of all 00050000-prefixed records (v0.4) / game-typed records (v0.4.1) | 511 | 492 |
 | Synthetic Homebrew | 9 | 9 |
 
 The Wii U profile declared 141 games and found 131 (**10 missing**);
@@ -14,8 +14,12 @@ the NES profile declared 95 and found all 95. Each selected the same
 (the other 2 are not necessarily exposed by `MCP_TitleList`).
 
 **Why v0.4.2 exists:** v0.4.1 logged the **first successful Menu
-MCP_TitleList call only**. The 19 fewer games vs v0.4 may be a
-snapshot/timing/device-state difference. We must not assume these
+MCP_TitleList call only**. These two **game counts are not directly comparable**: v0.4 counted all
+00050000-prefixed records, whereas v0.4.1 counted only recognized
+game app types. The difference in total records (586 vs 556) and
+10 exact Wii U Title IDs missing from v0.4.1 are real observations.
+They may reflect call timing or available title data; they do not prove
+uninstallation. We must not assume these
 games were uninstalled, and must not activate the sparse Barista saves
 or hide titles before resolving this.
 
@@ -31,7 +35,9 @@ This separate, inert-by-default Aroma WUPS plugin:
    `sd:/wiiu/library_profiles/v041-nes.allowlist`.
 3. Observes up to 64 successful, bounds-checked Menu calls after
    one explicit opt-in marker, recording at most 20 **changed**
-   inventory summaries in `v042-call-history.csv`.
+   inventory summaries in `v042-call-history.csv`. The report includes
+   both raw 00050000 prefix counts and recognized game app-type counts
+   for a fair comparison with v0.4 and v0.4.1.
 4. When a snapshot has better expected game/homebrew coverage
    (or the same coverage with more games), writes an updated
    **private** `v042-missing-ids.csv` with the exact *expected*
