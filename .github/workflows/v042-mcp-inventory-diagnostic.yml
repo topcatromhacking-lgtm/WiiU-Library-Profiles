@@ -1,0 +1,51 @@
+name: v0.4.2 MCP inventory diagnostics (READ ONLY)
+
+on:
+  push:
+    branches:
+      - feature/v0.4.2-mcp-missing-ids-diagnostic
+  pull_request:
+    paths:
+      - "console_menu_inventory_diagnostic/**"
+      - "tests/test_v042_inventory.c"
+      - ".github/workflows/v042-mcp-inventory-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python test regression suite
+        run: python -m unittest discover -s tests -v
+      - name: C allowlist and snapshot selection tests
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v041_allowlist.c -o /tmp/test_v041
+          /tmp/test_v041
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v042_inventory.c -o /tmp/test_v042
+          /tmp/test_v042
+
+  build:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build read-only Aroma WUPS plugin
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain \
+            -f console_menu_inventory_diagnostic/Dockerfile \
+            --target artifacts --output type=local,dest=console_menu_inventory_diagnostic/dist .
+          test -s console_menu_inventory_diagnostic/dist/wiiu_library_profiles_v042_inventory_diagnostic.wps
+      - name: Upload WUPS module only (NO activation marker)
+        uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v042-MCP-INVENTORY-DIAGNOSTIC-INERT
+          path: console_menu_inventory_diagnostic/dist/wiiu_library_profiles_v042_inventory_diagnostic.wps
+          if-no-files-found: error
+          retention-days: 14
