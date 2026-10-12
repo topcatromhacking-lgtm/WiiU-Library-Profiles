@@ -1,0 +1,38 @@
+name: v0.8 Experimental guarded profile filter (disabled by default)
+on:
+  push:
+    branches:
+      - feature/v0.8-guarded-profile-switch
+  pull_request:
+    paths:
+      - 'console_menu_profile_switch/**'
+      - 'tests/test_v08_hash_core.c'
+      - '.github/workflows/v08-guarded-switch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m unittest discover -s tests -v
+      - name: Host predicate and SHA256 test vectors
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -pedantic tests/test_v08_hash_core.c -o /tmp/v08_hash_core
+          /tmp/v08_hash_core
+  build:
+    needs: offline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build guarded WUPS plugin with pinned toolchain
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f console_menu_profile_switch/Dockerfile --target artifacts --output type=local,dest=console_menu_profile_switch/dist .
+          test -s console_menu_profile_switch/dist/wiiu_library_profiles_v08_guarded.wps
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v08-GUARDED-PLUGIN-INERT-WITHOUT-MARKER
+          path: console_menu_profile_switch/dist/wiiu_library_profiles_v08_guarded.wps
+          if-no-files-found: error
+          retention-days: 14
