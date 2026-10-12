@@ -112,8 +112,8 @@ static void initialize_once(){
 static void report(uint32_t call_count,uint32_t cap,const wlp_scan*s,const char *result){
  if(reported)return;reported=true;
  FILE*f=fopen(REPORT,"wb");if(!f)return;
- fputs("status,account,profile,barista_hash,records,capacity,expected_games,found_games,expected_homebrew,found_homebrew,would_hide_games,would_hide_homebrew\n",f);
- fprintf(f,"%s,%08lX,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",result,
+ fputs("plugin_version,status,account,profile,barista_hash,records,capacity,expected_games,found_games,expected_homebrew,found_homebrew,would_hide_games,would_hide_homebrew\n",f);
+ fprintf(f,"0.8.1,%s,%08lX,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",result,
  (unsigned long)target_account,profile,barista_hash_match?"MATCH":"MISMATCH_OR_UNAVAILABLE",(unsigned long)call_count,(unsigned long)cap,
  (unsigned long)s->required_games,(unsigned long)s->found_games,
  (unsigned long)s->required_homebrew,(unsigned long)s->found_homebrew,
