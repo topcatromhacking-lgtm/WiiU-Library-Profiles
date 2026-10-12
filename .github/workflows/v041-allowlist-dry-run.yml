@@ -1,0 +1,48 @@
+name: v0.4.1 Menu allowlist DRY RUN (inert by default)
+
+on:
+  push:
+    branches:
+      - feature/v0.4.1-allowlist-dry-run
+  pull_request:
+    paths:
+      - "console_menu_allowlist_dry_run/**"
+      - "tests/test_v041_allowlist.c"
+      - ".github/workflows/v041-allowlist-dry-run.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests -v
+      - name: Compile and run portable allowlist and dry-run test
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v041_allowlist.c -o /tmp/test_v041_allowlist
+          /tmp/test_v041_allowlist
+
+  build-disabled-probe:
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build actual WUPS .wps with pinned toolchain
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain \
+            -f console_menu_allowlist_dry_run/Dockerfile \
+            --target artifacts --output type=local,dest=console_menu_allowlist_dry_run/dist .
+          test -s console_menu_allowlist_dry_run/dist/wiiu_library_profiles_v041_dry_run.wps
+      - name: Upload read-only dry-run plugin, no marker/manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v041-ALLOWLIST-DRY-RUN-INERT-PLUGIN
+          path: console_menu_allowlist_dry_run/dist/wiiu_library_profiles_v041_dry_run.wps
+          if-no-files-found: error
+          retention-days: 14
