@@ -1,0 +1,34 @@
+name: v1.0.2 MCP step diagnostic WUHB
+on:
+  push:
+    branches:
+      - feature/v1.0.2-mcp-step-diagnostics
+  pull_request:
+    paths:
+      - 'standalone_mcp_step_diagnostic/**'
+      - 'tests/test_v102_mcp_steps.py'
+      - '.github/workflows/v102-mcp-step-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m unittest discover -s tests -p 'test_v102_mcp_steps.py' -v
+  crossbuild:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile with pinned wut devkitPPC image
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f standalone_mcp_step_diagnostic/Dockerfile --target artifacts --output type=local,dest=standalone_mcp_step_diagnostic/dist .
+          test -s standalone_mcp_step_diagnostic/dist/wlp_mcp_steps_v102.wuhb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v102-MCP-STEPS-READONLY-WUHB
+          path: standalone_mcp_step_diagnostic/dist/wlp_mcp_steps_v102.wuhb
+          if-no-files-found: error
+          retention-days: 14
