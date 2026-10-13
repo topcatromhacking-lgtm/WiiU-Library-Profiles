@@ -134,8 +134,8 @@ static void db_write_status(const char *result,uint32_t raw_count,uint32_t games
                             uint32_t confirmed,uint32_t review,uint32_t missing){
  FILE *f=fopen(DB_STATUS,"wb");
  if(!f)return;
- fputs("stage,db_state,result,db_records,raw_records,games,confirmed,review,unknown\\n",f);
- fprintf(f,"V11,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu\\n",
+ fputs("stage,db_state,result,db_records,raw_records,games,confirmed,review,unknown\n",f);
+ fprintf(f,"V11,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu\n",
          db_state,result,(unsigned long)db_view.count,
          (unsigned long)raw_count,(unsigned long)games,
          (unsigned long)confirmed,(unsigned long)review,(unsigned long)missing);
@@ -161,7 +161,7 @@ static void db_audit_capture(const MCPTitleListType *list,uint32_t count,uint32_
   db_write_status("AUDIT_OPEN_FAILED_FILTER_UNCHANGED",count,0,0,0,0);
   return;
  }
- fputs("title_id,app_type_hex,db_match,platform,region_mask,verified,name,product_code\\n",f);
+ fputs("title_id,app_type_hex,db_match,platform,region_mask,verified,name,product_code\n",f);
  uint32_t games=0,confirmed=0,review=0,missing=0;
  for(uint32_t i=0;i<count;i++){
   uint64_t id=list[i].titleId;
