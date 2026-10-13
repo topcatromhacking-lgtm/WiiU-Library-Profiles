@@ -1,0 +1,34 @@
+name: v1.0.3 SDUSB no-mount MCP diagnostic WUHB
+on:
+  push:
+    branches:
+      - feature/v1.0.3-sdusb-no-mount
+  pull_request:
+    paths:
+      - 'standalone_no_sd_diagnostic/**'
+      - 'tests/test_v103_no_sd.py'
+      - '.github/workflows/v103-no-sd-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m unittest discover -s tests -p 'test_v103_no_sd.py' -v
+  crossbuild:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile with pinned wut toolchain
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f standalone_no_sd_diagnostic/Dockerfile --target artifacts --output type=local,dest=standalone_no_sd_diagnostic/dist .
+          test -s standalone_no_sd_diagnostic/dist/wlp_no_sd_v103.wuhb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v103-SDUSB-NO-MOUNT-WUHB
+          path: standalone_no_sd_diagnostic/dist/wlp_no_sd_v103.wuhb
+          if-no-files-found: error
+          retention-days: 14
