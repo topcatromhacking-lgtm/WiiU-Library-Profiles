@@ -7,7 +7,7 @@ APP_NAME := Wii U Library Profiles - Inventory Scanner
 APP_SHORTNAME := WLP Inventory Scanner
 APP_AUTHOR := TopCat
 include $(DEVKITPRO)/wut/share/wut_rules
-TARGET := wlp_inventory_scanner
+TARGET := wlp_inventory_scanner_v101
 BUILD := build
 SOURCES := source
 DATA :=
