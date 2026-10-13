@@ -1,0 +1,40 @@
+name: v1.1 SD Master DB, read-only Menu diagnostic (experimental WUPS)
+on:
+  push:
+    branches:
+      - feature/v1.1-sd-master-database-offline
+  pull_request:
+    paths:
+      - 'console_menu_db_integrated/**'
+      - 'tests/test_v11_db_integration.py'
+      - 'tests/test_v11_wlpdb_core.c'
+      - '.github/workflows/v11-db-integrated.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m unittest discover -s tests -p 'test_v11_db_integration.py' -v
+      - run: |
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic -O2 tests/test_v11_wlpdb_core.c -o /tmp/v11db
+          /tmp/v11db
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic -O2 tests/test_v10_passive_inventory_core.c -o /tmp/v10
+          /tmp/v10
+  crossbuild:
+    needs: offline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cross compile separate WUPS plugin using pinned wut toolchain
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f console_menu_db_integrated/Dockerfile --target artifacts --output type=local,dest=console_menu_db_integrated/dist .
+          test -s console_menu_db_integrated/dist/wiiu_library_profiles_v11_db_readonly.wps
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v11-DB-READONLY-MENU-WUPS
+          path: console_menu_db_integrated/dist/wiiu_library_profiles_v11_db_readonly.wps
+          if-no-files-found: error
+          retention-days: 14
