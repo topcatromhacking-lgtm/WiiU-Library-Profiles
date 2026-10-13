@@ -198,47 +198,60 @@ static int collect_homebrew(uint32_t *found,uint32_t *errors){
     *found=scan_homebrew_dir(f,"sd:/wiiu/apps",2,errors);
     return fclose(f)==0;
 }
+/*
+ * v1.0.1: start WITHOUT disk or MCP I/O. Hardware launch/exit first,
+ * then opt-in with A to run inventory. This isolates launch freezes.
+ */
 int main(int argc,char**argv){
     (void)argc;(void)argv;
     WHBProcInit();
     WHBLogConsoleInit();
-    WHBLogPrintf("Wii U Library Profiles v1.0 - READ ONLY");
-    WHBLogPrintf("No Barista, filter, or installed title changes.");
-    WHBLogConsoleDraw();
-    if(!WHBMountSdCard()){
-        WHBLogPrintf("ERROR: could not mount SD card.");
-    }else{
-        mkdir("sd:/wiiu",0777);
-        mkdir("sd:/wiiu/library_profiles",0777);
-        mkdir(OUT_DIR,0777);
-        uint32_t rows=0,games=0,synth=0,named=0,regioned=0,hb=0,errors=0;
-        int mcp_error=0;
-        int ok1=collect_titles(&rows,&games,&synth,&named,&regioned,&mcp_error);
-        int ok2=collect_homebrew(&hb,&errors);
-        FILE*f=fopen(SUMMARY_OUT,"wb");
-        if(f){
-            fprintf(f,"version=1.0-stage-a\nmcp_ok=%d\nmcp_error=%d\nmcp_records=%lu\nbase_games=%lu\nsynthetic_homebrew=%lu\nmetadata_names=%lu\nmetadata_regions=%lu\nsd_homebrew_apps=%lu\nhomebrew_scan_errors=%lu\nhomebrew_csv_ok=%d\nplatform_identification=PARTIAL_EXPLICIT_UNKNOWN\nmenu_filter_modified=NO\nbarista_modified=NO\n",
-                  ok1,mcp_error,(unsigned long)rows,(unsigned long)games,
-                  (unsigned long)synth,(unsigned long)named,(unsigned long)regioned,
-                  (unsigned long)hb,(unsigned long)errors,ok2);
-            fclose(f);
-        }
-        WHBLogPrintf("Installed records: %lu; base games: %lu",
-                     (unsigned long)rows,(unsigned long)games);
-        WHBLogPrintf("Meta names: %lu; regions: %lu",
-                     (unsigned long)named,(unsigned long)regioned);
-        WHBLogPrintf("SD homebrew apps: %lu",(unsigned long)hb);
-        WHBLogPrintf("MCP status: %s (%d)",ok1?"OK":"ERROR",mcp_error);
-        WHBLogPrintf("CSV: %s",OUT_DIR);
-        WHBUnmountSdCard();
-    }
-    WHBLogPrintf("Press B on GamePad to exit.");
-    WHBLogConsoleDraw();
     VPADInit();
+    WHBLogPrintf("WLP Inventory Scanner v1.0.1 - SAFE START");
+    WHBLogPrintf("NO SCAN has run yet. No Menu/Barista changes.");
+    WHBLogPrintf("B: exit now   A: scan once");
+    WHBLogPrintf("Test B before testing A on a later run.");
+    WHBLogConsoleDraw();
+    int scanned=0, pressed=0;
     while(WHBProcIsRunning()){
         VPADStatus v={0};
-        VPADRead(VPAD_CHAN_0,&v,1,NULL);
-        if(v.trigger & VPAD_BUTTON_B)break;
+        VPADReadError err=VPAD_READ_NO_SAMPLES;
+        int n=VPADRead(VPAD_CHAN_0,&v,1,&err);
+        uint32_t down=(n>0&&err==VPAD_READ_SUCCESS)?v.trigger:0;
+        if(down & VPAD_BUTTON_B)break;
+        if((down & VPAD_BUTTON_A) && !scanned){
+            scanned=1;
+            WHBLogPrintf("A received. Mounting SD...");
+            WHBLogConsoleDraw();
+            if(!WHBMountSdCard()){
+                WHBLogPrintf("FAILED: SD mount. B to exit.");
+            } else {
+                WHBLogPrintf("SD mounted. Starting MCP inventory...");
+                WHBLogConsoleDraw();
+                mkdir("sd:/wiiu",0777);
+                mkdir("sd:/wiiu/library_profiles",0777);
+                mkdir(OUT_DIR,0777);
+                uint32_t rows=0,games=0,synth=0,named=0,regioned=0,hb=0,errors=0;
+                int mcp_error=0;
+                int ok1=collect_titles(&rows,&games,&synth,&named,&regioned,&mcp_error);
+                WHBLogPrintf("MCP done: status %d, records %lu",mcp_error,(unsigned long)rows);
+                WHBLogConsoleDraw();
+                int ok2=collect_homebrew(&hb,&errors);
+                FILE *f=fopen(SUMMARY_OUT,"wb");
+                if(f){
+                    fprintf(f,"version=1.0.1-safe-start\nmcp_ok=%d\nmcp_error=%d\nmcp_records=%lu\nbase_games=%lu\nsynthetic_homebrew=%lu\nmetadata_names=%lu\nmetadata_regions=%lu\nsd_homebrew_apps=%lu\nhomebrew_scan_errors=%lu\nhomebrew_csv_ok=%d\nmenu_filter_modified=NO\nbarista_modified=NO\n",
+                            ok1,mcp_error,(unsigned long)rows,(unsigned long)games,
+                            (unsigned long)synth,(unsigned long)named,(unsigned long)regioned,
+                            (unsigned long)hb,(unsigned long)errors,ok2);
+                    fclose(f);
+                }
+                WHBUnmountSdCard();
+                WHBLogPrintf("Homebrew: %lu  output: sd:/wiiu/library_profiles/v10/",
+                             (unsigned long)hb);
+            }
+            WHBLogPrintf("B: exit.");
+            WHBLogConsoleDraw();
+        }
         WHBLogConsoleDraw();
         OSSleepTicks(OSMillisecondsToTicks(70));
     }
