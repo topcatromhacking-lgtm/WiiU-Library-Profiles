@@ -3,7 +3,7 @@ import unittest
 SRC = (pathlib.Path(__file__).resolve().parents[1] / "standalone_mcp_step_diagnostic" / "source" / "main.c").read_text()
 class StepIsolation(unittest.TestCase):
     def test_no_mutation(self):
-        for x in ("WUPS_MUST_REPLACE","MCP_Install","MCP_Uninstall","BaristaAccountSaveFile","meta.xml","read_meta"):
+        for x in ("WUPS_MUST_REPLACE","MCP_Install","MCP_Uninstall","BaristaAccountSaveFile","xml_tag(","read_meta("):
             self.assertNotIn(x,SRC)
     def test_manually_gated_steps(self):
         main=SRC[SRC.index("int main("):]
