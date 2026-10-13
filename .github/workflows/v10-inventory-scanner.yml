@@ -1,8 +1,9 @@
-name: v1.0 Read-only inventory WUHB
+name: v1.0.1 Scanner recovery / B-exit gate
 on:
   push:
     branches:
       - feature/v1.0-readonly-inventory-scanner
+      - feature/v1.0.1-scanner-recovery-diagnostics
   pull_request:
     paths:
       - standalone_inventory_scanner/**
@@ -25,10 +26,10 @@ jobs:
       - name: Compile standalone WUHB with pinned wut toolchain
         run: |
           DOCKER_BUILDKIT=1 docker build --progress=plain -f standalone_inventory_scanner/Dockerfile --target artifacts --output type=local,dest=standalone_inventory_scanner/dist .
-          test -s standalone_inventory_scanner/dist/wlp_inventory_scanner.wuhb
+          test -s standalone_inventory_scanner/dist/wlp_inventory_scanner_v101.wuhb
       - uses: actions/upload-artifact@v4
         with:
-          name: WLP-v10-READONLY-SCANNER-WUHB
-          path: standalone_inventory_scanner/dist/wlp_inventory_scanner.wuhb
+          name: WLP-v101-OPTIN-READONLY-SCANNER-WUHB
+          path: standalone_inventory_scanner/dist/wlp_inventory_scanner_v101.wuhb
           if-no-files-found: error
           retention-days: 14
