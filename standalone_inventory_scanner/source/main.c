@@ -212,7 +212,7 @@ int main(int argc,char**argv){
     WHBLogPrintf("B: exit now   A: scan once");
     WHBLogPrintf("Test B before testing A on a later run.");
     WHBLogConsoleDraw();
-    int scanned=0, pressed=0;
+    int scanned=0;
     while(WHBProcIsRunning()){
         VPADStatus v={0};
         VPADReadError err=VPAD_READ_NO_SAMPLES;
