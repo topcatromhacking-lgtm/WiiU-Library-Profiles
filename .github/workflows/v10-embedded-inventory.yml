@@ -1,0 +1,40 @@
+name: v1.0 Passive Menu Inventory (experimental WUPS)
+on:
+  push:
+    branches:
+      - feature/v1.0-menu-integrated-inventory
+  pull_request:
+    paths:
+      - 'console_menu_inventory_embedded/**'
+      - 'tests/test_v10_embedded_filter_unchanged.py'
+      - 'tests/test_v10_passive_inventory_core.c'
+      - '.github/workflows/v10-embedded-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m unittest discover -s tests -p 'test_v10_embedded_filter_unchanged.py' -v
+      - run: |
+          gcc -std=c11 -Wall -Wextra -Werror -pedantic -O2 tests/test_v10_passive_inventory_core.c -o /tmp/wlp_v10_core
+          /tmp/wlp_v10_core
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -pedantic tests/test_v08_hash_core.c -o /tmp/wlp_v08_core
+          /tmp/wlp_v08_core
+  crossbuild:
+    needs: offline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile standalone variant of proven Menu plugin
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f console_menu_inventory_embedded/Dockerfile --target artifacts --output type=local,dest=console_menu_inventory_embedded/dist .
+          test -s console_menu_inventory_embedded/dist/wiiu_library_profiles_v10_passive_inventory.wps
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v10-PASSIVE-MENU-INVENTORY-WUPS
+          path: console_menu_inventory_embedded/dist/wiiu_library_profiles_v10_passive_inventory.wps
+          if-no-files-found: error
+          retention-days: 14
