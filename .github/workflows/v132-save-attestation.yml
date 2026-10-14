@@ -1,0 +1,39 @@
+name: v1.3.2 Read-Only Barista Source Attestation WUPS
+on:
+  push:
+    branches:
+      - feature/v1.3.2-active-save-attestation
+  pull_request:
+    paths:
+      - 'console_menu_save_attestation/**'
+      - 'tests/test_v132_*'
+      - '.github/workflows/v132-save-attestation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m unittest discover -s tests -p 'test_v132_attestation_integration.py' -v
+      - run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -pedantic tests/test_v132_save_probe.c -o /tmp/wlp132
+          /tmp/wlp132
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -pedantic tests/test_v12_selection_core.c -o /tmp/wlp12
+          /tmp/wlp12
+  crossbuild:
+    needs: offline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Crossbuild separately gated save attestation
+        run: |
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f console_menu_save_attestation/Dockerfile --target artifacts --output type=local,dest=console_menu_save_attestation/dist .
+          test -s console_menu_save_attestation/dist/wiiu_library_profiles_v132_save_attest.wps
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WLP-v132-READONLY-BARISTA-ATTEST
+          path: console_menu_save_attestation/dist/wiiu_library_profiles_v132_save_attest.wps
+          retention-days: 14
+          if-no-files-found: error
