@@ -202,8 +202,17 @@ static void db_audit_capture(const MCPTitleListType *list,uint32_t count,uint32_
   int c=fclose(existing);
   if(c!=0){db_event("EXISTING_CLOSE_FAILED",errno,count,n,hash);db_write_failed=true;return;}
   memcpy(db_last_fingerprint,fingerprint,32);db_has_last_fingerprint=true;
+  uint32_t confirmed=0,review=0,missing=0;
+  for(uint32_t i=0;i<count;i++){
+   uint64_t tid=list[i].titleId;
+   if(!wlp_is_game(tid,(uint32_t)list[i].appType))continue;
+   wlpdb_result info={0};
+   if(!wlpdb_find(&db_view,tid,&info))missing++;
+   else if(info.confirmed)confirmed++;
+   else review++;
+  }
   db_event("UNCHANGED_ALREADY_SAVED",0,count,n,hash);
-  db_write_status("SNAPSHOT_ALREADY_SAVED_FILTER_UNCHANGED",count,n,0,0,0);
+  db_write_status("SNAPSHOT_ALREADY_SAVED_FILTER_UNCHANGED",count,n,confirmed,review,missing);
   return;
  }
  if(errno!=ENOENT){
