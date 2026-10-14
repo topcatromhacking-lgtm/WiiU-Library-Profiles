@@ -15,14 +15,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #include "wlp_filter_core.h"
 #include "wlp_sha256.h"
 #include "wlp_inventory_core.h"
 #include "wlpdb_core.h"
+#include "wlp_game_set.h"
 
-WUPS_PLUGIN_NAME("Library Profiles v11 SD DATABASE READ");
+WUPS_PLUGIN_NAME("Library Profiles v11.1 SNAPSHOT FIX");
 WUPS_PLUGIN_DESCRIPTION("v0.8.1 filter, v1.0 snapshot and optional read-only DB join");
-WUPS_PLUGIN_VERSION("v1.1-db-read-only-experimental");
+WUPS_PLUGIN_VERSION("v1.1.1-db-snapshot-experimental");
 WUPS_PLUGIN_AUTHOR("TopCat");
 WUPS_PLUGIN_LICENSE("MIT");
 WUPS_USE_WUT_DEVOPTAB();
@@ -44,6 +46,8 @@ WUPS_USE_WUT_DEVOPTAB();
 #define DB_AUDIT_TMP ROOT "/v11-db-audit.csv.part"
 #define DB_AUDIT ROOT "/v11-db-audit.csv"
 #define DB_STATUS ROOT "/v11-db-status.csv"
+#define DB_EVENTS ROOT "/v111-db-events.csv"
+#define DB_OUTPUT_ROOT ROOT "/v111-db-audit-"
 /* Operational cap, independent of the decoder's wider format limit. */
 #define DB_MAX_FILE_BYTES (256u * 1024u)
 #define DB_MAX_RECORDS 4096u
@@ -51,7 +55,8 @@ static bool checked=false,enabled=false,manifest_ok=false,account_ok=false,baris
 static bool inventory_opted_in=false,inventory_io_failed=false;
 static uint32_t inventory_best_count=0;
 static bool db_opted_in=false,db_write_failed=false,db_status_reported=false;
-static uint32_t db_best_count=0;
+static uint8_t db_last_fingerprint[32]={0};
+static bool db_has_last_fingerprint=false;
 static uint8_t *db_bytes=nullptr;
 static wlpdb_view db_view={0};
 static const char *db_state="NOT_REQUESTED";
@@ -143,6 +148,14 @@ static void db_write_status(const char *result,uint32_t raw_count,uint32_t games
 }
 /* This is a metadata report only. It MUST NEVER control filtering, Barista,
  * title installation status or change the existing allowlist behavior. */
+/* Append-only diagnostic events preserve previous results and capture the actual
+ * failing operation and errno. Best effort: never affect profile filtering. */
+static void db_event(const char *step,int e,uint32_t raw,uint32_t games,const char *fingerprint){
+ FILE *f=fopen(DB_EVENTS,"ab");if(!f)return;
+ fprintf(f,"V111,%s,%d,%lu,%lu,%s\n",step,e,
+   (unsigned long)raw,(unsigned long)games,fingerprint?fingerprint:"");
+ fclose(f);
+}
 static void db_audit_capture(const MCPTitleListType *list,uint32_t count,uint32_t capacity,
                              const wlp_scan *stats){
  if(!db_opted_in || !stats || !wlp_ready(stats) || !list ||
@@ -150,32 +163,78 @@ static void db_audit_capture(const MCPTitleListType *list,uint32_t count,uint32_
  if(!db_bytes){
   if(!db_status_reported){
    db_write_status("DB_UNAVAILABLE_FILTER_UNCHANGED",count,0,0,0,0);
+   db_event("DB_UNAVAILABLE",0,count,0,"");
    db_status_reported=true;
   }
   return;
  }
- if(db_write_failed || count<=db_best_count)return;
- FILE *f=fopen(DB_AUDIT_TMP,"wb");
- if(!f){
+ if(db_write_failed)return;
+ /* Compare only installed GAME Title IDs, never the unstable raw MCP count. */
+ uint64_t *game_ids=(uint64_t*)malloc((size_t)count*sizeof(uint64_t));
+ if(!game_ids){db_write_failed=true;db_event("ALLOCATION_FAILED",ENOMEM,count,0,"");return;}
+ uint32_t n=0;
+ for(uint32_t i=0;i<count;i++)
+  if(wlp_is_game(list[i].titleId,(uint32_t)list[i].appType))
+   game_ids[n++]=list[i].titleId;
+ uint8_t fingerprint[32]={0};
+ if(!wlp_game_set_hash(game_ids,n,fingerprint)){
+  free(game_ids);db_write_failed=true;
+  db_event("GAME_SET_HASH_FAILED",EINVAL,count,n,"");
+  return;
+ }
+ free(game_ids);
+ if(db_has_last_fingerprint && memcmp(fingerprint,db_last_fingerprint,32)==0)return;
+ char hash[65];wlp_hash_hex(fingerprint,hash);
+ /* The DB CRC is part of the filename: reclassification can generate a new
+  * diagnostic even when installed games do not change. */
+ uint32_t master_crc=wlpdb_u32(db_bytes+16);
+ char final[250],part[260];
+ int len=snprintf(final,sizeof(final),DB_OUTPUT_ROOT "%s-%08lX.csv",
+                  hash,(unsigned long)master_crc);
+ if(len<0||(size_t)len>=sizeof(final)){db_write_failed=true;return;}
+ len=snprintf(part,sizeof(part),"%s.part",final);
+ if(len<0||(size_t)len>=sizeof(part)){db_write_failed=true;return;}
+ /* A completed immutable snapshot is never replaced (not even across boots).
+  * This sidesteps FAT/devoptab rename-over-existing limitations. */
+ errno=0;
+ FILE *existing=fopen(final,"rb");
+ if(existing){
+  int c=fclose(existing);
+  if(c!=0){db_event("EXISTING_CLOSE_FAILED",errno,count,n,hash);db_write_failed=true;return;}
+  memcpy(db_last_fingerprint,fingerprint,32);db_has_last_fingerprint=true;
+  db_event("UNCHANGED_ALREADY_SAVED",0,count,n,hash);
+  db_write_status("SNAPSHOT_ALREADY_SAVED_FILTER_UNCHANGED",count,n,0,0,0);
+  return;
+ }
+ if(errno!=ENOENT){
+  int e=errno;
+  db_event("DESTINATION_LOOKUP_FAILED",e,count,n,hash);
   db_write_failed=true;
-  db_write_status("AUDIT_OPEN_FAILED_FILTER_UNCHANGED",count,0,0,0,0);
+  db_write_status("DESTINATION_LOOKUP_FAILED_FILTER_UNCHANGED",count,n,0,0,0);
+  return;
+ }
+ errno=0;
+ FILE *f=fopen(part,"wb");
+ if(!f){
+  int e=errno;db_write_failed=true;db_event("PART_OPEN_FAILED",e,count,n,hash);
+  db_write_status("PART_OPEN_FAILED_FILTER_UNCHANGED",count,n,0,0,0);
   return;
  }
  fputs("title_id,app_type_hex,db_match,platform,region_mask,verified,name,product_code\n",f);
  uint32_t games=0,confirmed=0,review=0,missing=0;
  for(uint32_t i=0;i<count;i++){
-  uint64_t id=list[i].titleId;
+  uint64_t tid=list[i].titleId;
   uint32_t app=(uint32_t)list[i].appType;
-  if(!wlp_is_game(id,app))continue; /* updates/DLC/system do not consume icon slots */
+  if(!wlp_is_game(tid,app))continue;
   ++games;
   wlpdb_result info={0};
-  bool found=wlpdb_find(&db_view,id,&info)!=0;
+  bool found=wlpdb_find(&db_view,tid,&info)!=0;
   const char *match=found?(info.confirmed?"CONFIRMED":"REVIEW"):"UNKNOWN";
   if(!found)++missing;
   else if(info.confirmed)++confirmed;
   else ++review;
   fprintf(f,"%08lX%08lX,%08lX,%s,%s,%02X,%u,",
-   (unsigned long)(uint32_t)(id>>32),(unsigned long)(uint32_t)id,
+   (unsigned long)(uint32_t)(tid>>32),(unsigned long)(uint32_t)tid,
    (unsigned long)app,match,found?db_platform_name(info.platform):"UNKNOWN",
    found?info.region_mask:0u,found?info.confirmed:0u);
   if(found)db_csv_text(f,info.name,info.name_len);
@@ -185,13 +244,28 @@ static void db_audit_capture(const MCPTitleListType *list,uint32_t count,uint32_
   else fputs("\"\"",f);
   fputc('\n',f);
  }
- int write_err=ferror(f),closed=fclose(f);
- if(write_err || closed!=0 || rename(DB_AUDIT_TMP,DB_AUDIT)!=0){
+ int io_error=ferror(f);
+ int write_errno=io_error?errno:0;
+ errno=0;
+ int closed=fclose(f);
+ int close_errno=closed!=0?errno:0;
+ if(io_error || closed!=0){
   db_write_failed=true;
+  db_event(io_error?"PART_WRITE_FAILED":"PART_CLOSE_FAILED",
+           io_error?(write_errno?write_errno:EIO):close_errno,count,games,hash);
   db_write_status("AUDIT_WRITE_FAILED_FILTER_UNCHANGED",count,games,confirmed,review,missing);
   return;
  }
- db_best_count=count;
+ errno=0;
+ if(rename(part,final)!=0){
+  int e=errno;
+  db_write_failed=true;
+  db_event("RENAME_FAILED",e,count,games,hash);
+  db_write_status("AUDIT_RENAME_FAILED_FILTER_UNCHANGED",count,games,confirmed,review,missing);
+  return;
+ }
+ memcpy(db_last_fingerprint,fingerprint,32);db_has_last_fingerprint=true;
+ db_event("SNAPSHOT_SAVED",0,count,games,hash);
  db_write_status("AUDIT_OK_FILTER_UNCHANGED",count,games,confirmed,review,missing);
 }
 
@@ -327,7 +401,7 @@ ON_APPLICATION_START(){
  if(db_bytes)free(db_bytes);
  db_bytes=nullptr;memset(&db_view,0,sizeof(db_view));
  db_opted_in=db_write_failed=db_status_reported=false;
- db_best_count=0;db_state="NOT_REQUESTED";
+ db_has_last_fingerprint=false;memset(db_last_fingerprint,0,sizeof(db_last_fingerprint));db_state="NOT_REQUESTED";
  target_account=0;profile[0]=serial[0]=0;status="NOT_ENABLED";
  memset(&selection,0,sizeof(selection));
 }
