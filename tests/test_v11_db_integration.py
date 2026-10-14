@@ -30,8 +30,8 @@ class V11DBIntegration(unittest.TestCase):
         self.assertIn('AUDIT_OK_FILTER_UNCHANGED',NEW)
         self.assertIn('v11-db-audit.csv',NEW)
         self.assertIn('v11-db-status.csv',NEW)
-        self.assertIn('rename(DB_AUDIT_TMP,DB_AUDIT)',NEW)
-        self.assertIn('if(!wlp_is_game(id,app))continue;',NEW)
+        self.assertIn('rename(part,final)',NEW)
+        self.assertIn('if(!wlp_is_game(tid,app))continue;',NEW)
     def test_sources_forked_without_modifying_filter(self):
         for n in ('wlp_filter_core.h','wlp_sha256.h','wlp_inventory_core.h'):
             self.assertEqual((R/'console_menu_inventory_embedded/src'/n).read_bytes(),
