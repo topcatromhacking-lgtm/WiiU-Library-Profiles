@@ -23,7 +23,7 @@ NEW_SELECTOR=r'''static bool wulp140TryExtended(const std::string &originalSave,
     constexpr const char *workingRoot = "fs:/vol/external01/wiiu/wulp/profiles/extended/save/80000001";
     std::vector<uint8_t> marker, original, golden, working, allowlist;
     if (!wulp138ReadBounded(std::string(root) + "/ACTIVE_PROFILE.txt", 220u, marker)) return false;
-    static const char legacy[] = "WULP137:1\\nprofile=legacy\\n";
+    static const char legacy[] = "WULP137:1\nprofile=legacy\n";
     if (marker.size() == sizeof(legacy)-1u &&
         memcmp(marker.data(), legacy, marker.size()) == 0) return false;
     if (!wulp138ReadBounded(originalSave, W138_BARISTA, original) ||
