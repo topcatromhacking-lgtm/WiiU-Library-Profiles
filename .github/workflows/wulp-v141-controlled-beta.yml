@@ -1,0 +1,54 @@
+name: WULP v1.3.11 controlled-profile Wii U candidate
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wulp-v141-controlled-beta.yml
+      - tools/build_v141_homp.py
+      - tools/build_v140_homp.py
+      - tools/build_v138_homp.py
+      - src/wulp_v140_working_gate.h
+      - src/wulp_v138_gate.h
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reuse offline gates and verify source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v138_homp.py tools/build_v140_homp.py tools/build_v141_homp.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v140_working.cpp -o /tmp/w141_native
+          /tmp/w141_native
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v141_homp.py upstream
+          grep -q 'size/static_cast<uint32_t>(sizeof(MCPTitleListType))' upstream/src/main.cpp
+          grep -q 'gWulp138Extended' upstream/src/main.cpp
+          grep -q 'WULP141' upstream/src/SaveRedirection.cpp
+          printf '#pragma once\n#define VERSION_EXTRA " (WULP141-HW-BETA)"\n' > upstream/src/version.h
+      - name: Build Wii U .wps
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v141-build
+          docker run --rm -v "$PWD/upstream:/project" wulp-v141-build make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Build activation-package binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v141-HW-BETA.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf '%s\n' 'WULP141: pinned HOMP, writable working profile, golden paired reference, capacity-safe MCP hook. No personal files included. Never deploy without private preflight and rollback.' > dist/READ_ME_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v141-Controlled-Hardware-Beta
+          path: dist/
+          retention-days: 30
