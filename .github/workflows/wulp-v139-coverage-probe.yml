@@ -1,0 +1,63 @@
+name: WULP v1.3.9 passive 277-title enumeration probe
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wulp-v139-coverage-probe.yml
+      - tools/build_v139_coverage.py
+      - tools/build_v138_homp.py
+      - src/wulp_v138_gate.h
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pinned integrated HOMP build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v138_homp.py tools/build_v139_coverage.py
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v139_coverage.py upstream
+          grep -q 'wulp139Observe(result, \*outTitleCount, titleList)' upstream/src/main.cpp
+          grep -q 'WULP139' upstream/src/main.cpp
+          grep -q 'WULP138' upstream/src/SaveRedirection.cpp
+          printf '#pragma once\n#define VERSION_EXTRA " (WULP139-PROBE)"\n' > upstream/src/version.h
+          docker build upstream -t wulp-v139-build
+          docker run --rm -v "$PWD/upstream:/project" wulp-v139-build make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Package passive hardware probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v139-PASSIVE.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          cat > dist/READ_ME_FIRST.txt <<'EOF'
+          WULP139: experimental PASSIVE 277-title MCP enumeration hardware probe.
+          This is a modified pinned Homebrew-on-Menu .wps, NOT an extra plugin.
+          Replace only the existing homebrew_on_menu.wps when the Wii U is OFF.
+          Backup your actual original plugin first; restore it immediately after test.
+          No candidate Barista, marker, WLPA or profile is included here.
+          The selected private list is read from:
+          sd:/wiiu/wulp/private-expected-277.bin
+          This path is read-only; the plugin does not write it or any saves.
+          Use owner-specific file provided separately; not part of PUBLIC CI artifact.
+          View [WULP139] events with same UDP LoggingModule approach as v1.3.5.
+          Required: gHideHomebrew must remain disabled for redirected save.
+          For this test, keep WULP137 ACTIVE_PROFILE.txt absent or 'legacy'.
+          Do not combine with other title-list filter hooks; disable conflicting
+          previous WULP .wps filters temporarily and back them up.
+          This is NOT a 277-game profile activation or stable release.
+          Error or unavailable catalog does not enable the extended profile.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v139-Passive-MCP-Enumeration-Probe
+          path: dist/
+          retention-days: 30
