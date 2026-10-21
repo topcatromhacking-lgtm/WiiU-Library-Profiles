@@ -26,6 +26,7 @@ static bool wulp139Seen[277] = {};
 static int wulp139Status = 0; // 0: missing/retry, 1: verified, -1: rejected
 static uint32_t wulp139Calls = 0;
 static unsigned wulp139Total = 0;
+static bool wulp139AnnouncedComplete = false;
 
 static bool wulp139LoadExpected() {
     if (wulp139Status == 1) return true;
@@ -93,9 +94,9 @@ static void wulp139Observe(int32_t result, uint32_t returnedCount,
                      wulp139Calls, returnedCount, matchedThisCall,
                      wulp139Total, 277u - wulp139Total);
     }
-    if (wulp139Total == 277u) {
+    if (wulp139Total == 277u && !wulp139AnnouncedComplete) {
         WHBLogPrintf("[WULP139] event=COVERAGE_COMPLETE expected=277 observed=277");
-        wulp139Total = 278u; // Prevent repeated celebration messages.
+        wulp139AnnouncedComplete = true;
     }
 }
 """
