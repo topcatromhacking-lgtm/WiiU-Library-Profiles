@@ -42,6 +42,14 @@ This experimental build instruments the *existing* ContentRedirectionModule's su
 
 The one-boot capture and private-backup comparison have been completed. The diagnostic module should be rolled back to the original module. Details: [October 21 checkpoint](docs/V136_HARDWARE_AND_OFFLINE_CHECKPOINT_2026-10-21.md). Next is an offline paired staging and rollback prototype; **do not install the 277-game candidate**.
 
+### v1.3.9 — all 277 selected titles observed on physical Wii U
+
+**Hardware PASS:** Owner's sanitized one-boot report gave `COMPLETE_SELECTED_TITLE_COVERAGE_OBSERVED`, cumulative `277/277`, three scan events and peak native title count 660. This proves enumeration coverage, **not** 277 displayed icons. [Hardware evidence](docs/V139_HARDWARE_RESULT_2026-10-21.md).
+
+### v1.3.10 — writable Barista / immutable golden reference (compiled alpha)
+
+**[Wii U cross-build PASS](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/39687608333)**. New paired startup gate validates the immutable golden Barista/WLPA before selecting a writable working Barista. Subsequent boots accept reordered USB-root slots with the **same** 277 games, first 15 icons and folder banks protected; any mismatch selects the original legacy profile without rewriting user saves. This has passed native tests and Wii U compilation, **not live profile hardware or power-loss validation**. Owner-specific original backups/allowlist are still required before profile deployment. [Detailed checkpoint](docs/V140_WRITABLE_PROFILE_ALPHA_2026-10-21.md).
+
 ### v1.3.8 integrated Homebrew-on-Menu Wii U WUPS alpha (compiled)
 
 **[Compiled build passed](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/39681354740)**. The 238664-byte PowerPC `.wps` integrates opt-in profile directory selection in the pinned Homebrew-on-Menu SaveRedirection code, matches the 277-game / 284-entry WLPA pair, and applies the same selection in MCP title filtering. Invalid or absent profile inputs fall back to the legacy redirect. **No real 277-game hardware activation or write-persistence test has passed yet.** Existing v0.8 hooks may conflict, and title enumeration completeness is not yet established. Do not treat this as a safe permanent multi-profile release. [Engineering status and rollback limitations](docs/V138_INTEGRATED_PLUGIN_2026-10-21.md).
