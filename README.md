@@ -34,6 +34,14 @@ The recovered Python [source](src/) and [tests](tests/) are now tracked individu
 
 New [v1.3.3 trace verifier](docs/V133_TRACE_VERIFIER.md) is a **PC-only** fail-closed parser with a portable C capture interface and synthetic end-to-end tests. It does **not** currently capture Wii U hardware events and cannot establish redirected-save use without instrumenting the actual Homebrew-on-Menu and ContentRedirectionModule I/O paths.
 
+### v1.3.5: real Wii U Menu read probe (hardware test pending)
+
+**The [pinned diagnostic Wii U module build passed](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/39544670749)** on GitHub Actions. Download the workflow artifact `WULP-v135-WiiU-Hardware-Read-Probe` (includes `.wms`, UDP collector, private-backup fingerprint checker and rollback notes). The compile and synthetic PC verification passed, but **no console hardware execution has yet been observed**.
+
+This experimental build instruments the *existing* ContentRedirectionModule's successful Barista open/read/close operations, rather than adding a competing SAVEInit hook. It reports the real redirect path classification and fingerprints of bytes returned to Wii U Menu without logging the account, serial or save contents. The private original Barista and active WLPA allowlist are not modified by the diagnostic code. Back up the original module and use a powered-off SD replacement and rollback.
+
+Next test: one boot with the diagnostic `.wms`, capture filtered `[WULP135]` records using `v135_capture_udp.py` (UDP fallback 4405; or existing LoggingModule capture), restore the original module, and run `v135_probe_report.py` against a *private* backup to produce `v135-sanitized-report.json`. Share only that sanitized JSON, never the raw save/log. A matching redirected read is a **first hardware proof**, not validation of the full 277-game profile.
+
 ### v1.3.4 PC test (no console changes)
 
 **[Download WULP v1.3.4 PC offline test](releases/v1.3.4/WULP-v1.3.4-PC-Offline-Test.zip)**. On Windows with Python 3, extract and run `run_v134_pc_test.cmd`; optionally copy earlier private reports into `PRIVATE_INPUTS/`. Upload only the sanitized `v134-pc-test-result.json`. Details: [PC guide](docs/V134_PC_TEST.md), [engineering status and limits](docs/V134_SOURCE_GATE.md).
