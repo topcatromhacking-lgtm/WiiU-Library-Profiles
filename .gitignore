@@ -11,3 +11,5 @@ private/
 user-private/
 *.quarantine
 *.not-installable-quarantine
+/PRIVATE_INPUTS/
+/v134-pc-test-result.json

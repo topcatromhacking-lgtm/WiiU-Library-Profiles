@@ -25,7 +25,7 @@ MAX_EVENTS = 5000
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 EVENTS = {
     "SAVE_INIT", "LAYER_REGISTER", "MENU_OPEN", "MENU_READ", "MENU_CLOSE",
-    "LAYER_REMOVE", "ACCOUNT_CHANGE", "SESSION_END",
+    "LAYER_REMOVE", "ACCOUNT_CHANGE", "ACTIVE_SNAPSHOT", "SESSION_END",
 }
 FIELDS = {
     "SAVE_INIT": {"menu_title", "sd_mounted", "homebrew_visible", "account"},
@@ -35,6 +35,7 @@ FIELDS = {
     "MENU_CLOSE": {"file_handle", "result"},
     "LAYER_REMOVE": {"handle"},
     "ACCOUNT_CHANGE": {"account"},
+    "ACTIVE_SNAPSHOT": {"handle", "still_active"},
     "SESSION_END": set(),
 }
 
@@ -95,6 +96,7 @@ def verify(trace: list[dict], backup: bytes, expected_account: str) -> dict:
     reads = []
     closed = False
     session_done = False
+    active_snapshot = False
     for idx, event in enumerate(trace):
         op = event["event"]
         if session_done:
@@ -145,19 +147,29 @@ def verify(trace: list[dict], backup: bytes, expected_account: str) -> dict:
                 return {"status": "SESSION_INVALID", "detail": "BAD_CLOSE"}
             closed = True
         elif op == "LAYER_REMOVE":
+            if active_snapshot:
+                return {"status": "SESSION_INVALID", "detail": "REMOVE_AFTER_SNAPSHOT"}
             if event["handle"] != layer or not active:
                 return {"status": "SESSION_INVALID", "detail": "BAD_LAYER_REMOVE"}
             active = False
         elif op == "ACCOUNT_CHANGE":
             return {"status": "SESSION_INVALID", "detail": "ACCOUNT_SWITCH"}
+        elif op == "ACTIVE_SNAPSHOT":
+            if (active_snapshot or not active or not opened or not closed
+                    or event["handle"] != layer or event["still_active"] is not True):
+                return {"status": "SESSION_INVALID", "detail": "INVALID_ACTIVE_SNAPSHOT"}
+            active_snapshot = True
         elif op == "SESSION_END":
             session_done = True
     if not session_done:
         return {"status": "ACTIVE_USE_UNPROVEN", "detail": "SESSION_NOT_FINALIZED"}
     if not reads or not closed:
         return {"status": "ACTIVE_USE_UNPROVEN", "detail": "NO_COMPLETE_READ_SESSION"}
-    if active:  # Layer should remain registered through read and close, removed afterwards.
-        return {"status": "ACTIVE_USE_UNPROVEN", "detail": "LAYER_NOT_FINALIZED"}
+    # In a normal Wii U Menu session the Homebrew-on-Menu redirect is deliberately
+    # left registered. Require a trusted capture-layer snapshot *after close*
+    # instead of forcing the diagnostic to remove the live FS layer.
+    if active and not active_snapshot:
+        return {"status": "ACTIVE_USE_UNPROVEN", "detail": "LAYER_STILL_ACTIVE_WITHOUT_SNAPSHOT"}
     intervals = sorted(reads)
     reach = 0
     for start, end in intervals:

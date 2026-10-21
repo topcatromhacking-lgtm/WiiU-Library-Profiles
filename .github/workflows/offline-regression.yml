@@ -22,3 +22,12 @@ jobs:
         run: |
           cc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v132_barista_probe_core.c -o /tmp/wulp-barista-structure
           /tmp/wulp-barista-structure
+      - name: Compile portable v1.3.4 physical-source classifier
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v134_physical_source.c -o /tmp/wulp-v134-path
+          /tmp/wulp-v134-path
+      - name: Compile v1.3.4 C-to-Python synthetic active-layer snapshot fixture
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v134_snapshot_capture.c -o /tmp/wulp-v134-snapshot
+          /tmp/wulp-v134-snapshot > /tmp/wulp-v134-snapshot.jsonl
+          test -s /tmp/wulp-v134-snapshot.jsonl

@@ -121,8 +121,12 @@ return wlp_emit(t,"MENU_READ",fields);
 static int wlp_trace_close(WlpTrace*t,uint32_t file_handle,int success){
 char fields[120];snprintf(fields,sizeof fields,",\"file_handle\":%u,\"result\":\"%s\"",file_handle,success?"SUCCESS":"FAILED");return wlp_emit(t,"MENU_CLOSE",fields);
 }
-static int wlp_trace_remove(WlpTrace*t,uint32_t layer_handle){
+static inline int wlp_trace_remove(WlpTrace*t,uint32_t layer_handle){
 char fields[64];snprintf(fields,sizeof fields,",\"handle\":%u",layer_handle);return wlp_emit(t,"LAYER_REMOVE",fields);
+}
+static inline int wlp_trace_active_snapshot(WlpTrace*t,uint32_t layer_handle,int still_active){
+char fields[96];snprintf(fields,sizeof fields,",\"handle\":%u,\"still_active\":%s",layer_handle,still_active?"true":"false");
+return wlp_emit(t,"ACTIVE_SNAPSHOT",fields);
 }
 static int wlp_trace_end(WlpTrace*t){return wlp_emit(t,"SESSION_END","");}
 #endif
