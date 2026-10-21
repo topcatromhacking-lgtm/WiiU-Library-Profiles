@@ -1,0 +1,20 @@
+name: WULP offline regression
+on:
+  push:
+    paths: ["src/**", "tests/**", ".github/workflows/offline-regression.yml"]
+  pull_request:
+    paths: ["src/**", "tests/**", ".github/workflows/offline-regression.yml"]
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Python tests against synthetic data only
+        run: python -m unittest discover -s tests -v
+      - name: Compile and run structure-only C test
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v132_barista_probe_core.c -o /tmp/wulp-barista-structure
+          /tmp/wulp-barista-structure

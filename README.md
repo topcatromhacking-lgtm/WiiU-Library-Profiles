@@ -21,8 +21,14 @@ This archive contains the optional Wii U Menu-side **read-only attestation WUPS 
 | v1.2 selection preview | User hardware-tested; 277-game candidate |
 | v1.3.1 paired Barista/account save and allowlist generator | Offline validated; not installed |
 | v1.3.2 read-only attestation WUPS and PC preflight | 33 Python checks and WUT/WUPS build reported PASS |
-| v1.3.2 on-console attestation | **NOT TESTED** |
+| v1.3.2 read-only on-console attestation | **STRUCTURE_OK**, hardware-tested; active redirection **UNPROVEN** |
+| v1.3.2 single-backup report/icon reconciliation | **PASS**, read-only; 51 Python tests + C11 synthetic check |
+| v1.3.2 proposed 277-game profile / 284-entry WLPA pairing | **Offline validated**, not deployed |
 | Safe multi-profile transition and synchronized Barista/allowlist deployment | **NOT IMPLEMENTED** |
+
+### Reproducible source and testing
+
+The recovered Python [source](src/) and [tests](tests/) are now tracked individually and run on synthetic data in CI. To re-check your **private** existing Barista snapshot and v1.3.2 reports without creating any console output or deployable files, use [this read-only checker](docs/READ_ONLY_EVIDENCE_CHECK.md). See the [October 20 checkpoint](docs/V132_HARDWARE_OFFLINE_CHECKPOINT_2026-10-20.md) for detailed interpretation. Hardware-tested read-only inspection does **not** establish that the actual Wii U Menu consumed the candidate redirected save.
 
 **Warning:** Do not install the experimental package on a Wii U without reading `README-START-HERE.txt` and `TRANSACTION-SAFETY-GATE.md`, backing up the working plugin and SD redirects, and understanding the recovery path. **Do not replace BaristaAccountSaveFile.dat or any live allowlist using this release.** It is a read-only diagnostic, not a deployer.
 

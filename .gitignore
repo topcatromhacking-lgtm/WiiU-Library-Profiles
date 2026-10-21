@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.dat
+*.wps
+*.allowlist
+*BaristaAccountSaveFile*
+**/PRIVATE/
+private/
+user-private/
+*.quarantine
+*.not-installable-quarantine
