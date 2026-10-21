@@ -42,6 +42,10 @@ This experimental build instruments the *existing* ContentRedirectionModule's su
 
 The one-boot capture and private-backup comparison have been completed. The diagnostic module should be rolled back to the original module. Details: [October 21 checkpoint](docs/V136_HARDWARE_AND_OFFLINE_CHECKPOINT_2026-10-21.md). Next is an offline paired staging and rollback prototype; **do not install the 277-game candidate**.
 
+### v1.3.7 immutable profile selection (PC and portable C tests only)
+
+The host-side immutable-profile lab and portable C selection gate passed **36 tests** (including 7 native-C tests). The architecture selects a previously validated Barista/WLPA directory through one marker and falls back to the unmodified legacy redirect when input verification fails. A revert to legacy does not depend on candidate health. **No v1.3.7 WUPS binary, real two-profile Menu switching, or FAT32 power-loss validation exists yet.** [Checkpoint and integration gate](docs/V137_IMMUTABLE_PROFILE_GATE_2026-10-21.md).
+
 ### v1.3.6 PC-only paired staging / rollback prototype\n\nA standalone v1.3.6 host-side prototype completed 15 synthetic tests for a 277-game candidate, 284-entry WLPA pairing, preservation checks and simulated rollback under injected failures. It does not modify the Wii U or provide live atomic switching, and requires owner-private historical CSV and Barista inputs before a real candidate can be generated. See the [hardware and engineering checkpoint](docs/V136_HARDWARE_AND_OFFLINE_CHECKPOINT_2026-10-21.md).\n\n### v1.3.4 PC test (no console changes)
 
 **[Download WULP v1.3.4 PC offline test](releases/v1.3.4/WULP-v1.3.4-PC-Offline-Test.zip)**. On Windows with Python 3, extract and run `run_v134_pc_test.cmd`; optionally copy earlier private reports into `PRIVATE_INPUTS/`. Upload only the sanitized `v134-pc-test-result.json`. Details: [PC guide](docs/V134_PC_TEST.md), [engineering status and limits](docs/V134_SOURCE_GATE.md).
