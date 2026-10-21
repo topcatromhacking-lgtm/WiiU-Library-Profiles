@@ -1,0 +1,64 @@
+name: WULP v1.3.10 writable-profile Wii U beta
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wulp-v140-writable-profile.yml
+      - src/wulp_v140_working_gate.h
+      - tools/build_v140_homp.py
+      - tests/test_v140_working.cpp
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and execute native persistence gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v140_homp.py tools/build_v138_homp.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v140_working.cpp -o /tmp/v140_gate
+          /tmp/v140_gate
+      - name: Compile pinned Wii U Homebrew-on-Menu integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v140_homp.py upstream
+          grep -q "wulp140TryExtended" upstream/src/SaveRedirection.cpp
+          grep -q "gWulp138Extended" upstream/src/main.cpp
+          printf '#pragma once\n#define VERSION_EXTRA " (WULP140-ALPHA)"\n' > upstream/src/version.h
+          docker build upstream -t wulp-v140-build
+          docker run --rm -v "$PWD/upstream:/project" wulp-v140-build make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Prepare experimental artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v140-WORKING-ALPHA.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          cat > dist/READ_ME_FIRST.txt <<'EOF'
+          WULP 1.3.10 - alpha Wii U persistence experiment.
+          NOT INSTALL-READY; contains no private account save/profile data.
+          Compiled source is pinned Homebrew-on-Menu.
+          This .wps would replace, not supplement, homebrew_on_menu.wps.
+          Marker and WLPA still match the immutable GOLDEN reference.
+          Mutable working Barista is stored in the profile save redirect path.
+          Support limited to unchanged fixed icons, unchanged folder banks,
+          and reordering of the same 277 USB root game IDs.
+          Other changes fail closed to the existing legacy save redirect.
+          The console has NOT yet tested live writable saves or rollback.
+          Preserve original homebrew_on_menu.wps and current Barista; do not
+          activate the extended profile without independent rollback checks.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v140-Writable-Profile-Alpha
+          path: dist/
+          retention-days: 30
