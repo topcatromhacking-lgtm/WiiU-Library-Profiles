@@ -1,0 +1,86 @@
+name: WULP v1.3.8 integrated Homebrew-on-Menu beta
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wulp-v138-integrated-beta.yml
+      - tools/build_v138_homp.py
+      - src/wulp_v138_gate.h
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-integrated:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source and SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v138_homp.py
+          cat > /tmp/w138_test.cpp <<'EOF'
+          #include <cassert>
+          #include <cstring>
+          #include "wulp_v138_gate.h"
+          int main() {
+            uint8_t digest[32]; char hex[65];
+            w138_sha((const uint8_t*)"abc", 3, digest); w138_hex(digest, hex);
+            assert(!strcmp(hex, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
+            w138_sha((const uint8_t*)"", 0, digest); w138_hex(digest, hex);
+            assert(!strcmp(hex, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+            assert(w138_gate(nullptr,0,nullptr,0,nullptr,0,nullptr,0,nullptr)==0);
+          }
+          EOF
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src /tmp/w138_test.cpp -o /tmp/w138_test
+          /tmp/w138_test
+      - name: Pin upstream and patch verified source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v138_homp.py upstream
+          grep -q WULP138 upstream/src/SaveRedirection.cpp
+          grep -q gWulp138Extended upstream/src/main.cpp
+          grep -q w138_gate upstream/src/wulp_v138_gate.h
+          echo '#pragma once' > upstream/src/version.h
+          echo '#define VERSION_EXTRA " (WULP138)"' >> upstream/src/version.h
+      - name: Build Wii U WUPS plugin using pinned upstream toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v138-build
+          docker run --rm -v "$PWD/upstream:/project" wulp-v138-build make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Build rollback-ready diagnostic package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v138-EXPERIMENTAL.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          cat > dist/READ_ME_FIRST.txt <<'EOF'
+          WULP v1.3.8 integrated Homebrew-on-Menu experimental plugin.
+          Pinned upstream: c3b6d06301ba97f479da6227c8dd95bbda01d29f.
+          NO PRIVATE BARISTA, INVENTORY OR WLPA FILES INCLUDED.
+          Do NOT install this package merely to repeat PC tests.
+          It is an experimental integration prototype with no completed hardware validation.
+          When marker or candidate is absent/invalid, uses the unchanged legacy save path.
+          Only account 80000001 may opt into the extended mode.
+          Marker uses WULP137:1 exact format. Candidate must be valid at boot.
+          USB games and synthetic HB entries are filtered from the same validated WLPA.
+          CAUTION: Menu writes to the extended save may invalidate the immutable-pair digest
+          and force legacy fallback next boot. Persistent profile switching is NOT proven.
+          Existing WULP filters may conflict. Do not stack plugins blindly.
+          Keep original homebrew_on_menu.wps and the original redirected save backed up.
+          Do not copy anything to the Wii U until the active profile data and rollback
+          procedure have been independently checked.
+          EOF
+          cp tools/build_v138_homp.py dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v138-Integrated-WiiU-Beta
+          path: dist/
+          retention-days: 30
