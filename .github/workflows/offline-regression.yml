@@ -14,6 +14,10 @@ jobs:
           python-version: '3.12'
       - name: Run Python tests against synthetic data only
         run: python -m unittest discover -s tests -v
+      - name: Compile and run portable v1.3.3 trace capture SHA-256 vectors
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v133_trace_capture.c -o /tmp/wulp-v133-capture
+          /tmp/wulp-v133-capture
       - name: Compile and run structure-only C test
         run: |
           cc -std=c11 -Wall -Wextra -Werror -pedantic tests/test_v132_barista_probe_core.c -o /tmp/wulp-barista-structure

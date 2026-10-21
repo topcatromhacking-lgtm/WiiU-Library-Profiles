@@ -44,3 +44,24 @@ Produce an experimental read-only instrumentation build (separately reviewed and
 - After this proof, the two-file Barista/WLPA transition, `multi` profile implementation and full powered-off rollback remain separate gates.
 
 **Current result:** the four-file v1.3.2 offline verifier passes, but all active-consumption steps above are **not yet verified**. The 277-game proposal remains quarantined.
+
+## v1.3.3 engineering implementation (offline only)
+
+The tracked code now includes:
+
+- `src/v133_active_use_trace.py`: fail-closed JSONL gate comparing individual captured Menu read-byte hashes with the independently backed-up save. A complete coverage of the 130,116-byte file is required for `ACTIVE_USE_VERIFIED_BY_TRACE`.
+- `src/v133_trace_capture.h`: portable C11 reference capture interface, with internal SHA-256 and a fixed-size **in-memory** trace buffer, no game-save or filesystem writes. A caller that claims `SD_REDIRECT_ACCOUNT_SAVE` **must** determine that provenance inside the real ContentRedirectionModule `FSWrapper` after its actual redirected open succeeds; a guessed path or independent `fopen` is not valid evidence.
+- `tests/test_v133_active_use_trace.py`, `tests/test_v133_trace_capture.c`, `tests/test_v133_cross_language.py`: fail-closed protocol tests, SHA-256 test vectors, and cross-language round-trip tests using **synthetic** data only.
+
+Important: the portable C trace interface is *not a compiled WUPS or ContentRedirectionModule integration*. It is a safe testable building block to bring into a source-pinned instrumentation build, not a tool to install on a console. The reference C emitter can fabricate a structurally valid synthetic trace in tests, which proves parser integrity, **not actual console activity**.
+
+### Exact integration points, still to implement in Wii U components
+
+1. `homebrew_on_menu_plugin/src/SaveRedirection.cpp` in `initSaveData`: after actual `ContentRedirection_AddFSLayer` call, emit a `LAYER_REGISTER` result and actual handle. Check the `SAVEInit` gating variables `sSDIsMounted`, `gHideHomebrew`, `OSGetTitleID`, and current account. Do not alter registration, cleanup, or the existing error handling.
+2. `ContentRedirectionModule/src/FSWrapper.cpp` in `FSWrapper::FSOpenFileWrapper`: after `open(newPath.c_str(), _mode)` **and** successful `getNewFileHandle()`, record an `OPEN` only if `path` is precisely the Barista save and the resolved `newPath` points to the Homebrew-on-Menu redirect for the same current user. Never emit the successful source classification using just `path` or the existence of a candidate SD file.
+3. In `FSWrapper::FSReadFileWrapper`: after `readIntoBuffer(real_fd, buffer, size, count)` returns a positive byte count for the exact matched fd, capture those **returned bytes**, their offset (tracked via `lseek` and `FSReadFileWithPosWrapper`), and SHA-256. Track repeated/out-of-order reads accurately. Do not replace, move or seek the original fd just to hash it.
+4. In `FSWrapper::FSCloseFileWrapper` and `SaveRedirectionCleanUp`, record successful close and layer removal. Account changes invalidate sessions. Missing events, buffer exhaustion, parser errors, or incomplete file coverage fail closed.
+5. **Single log ownership is needed.** Homebrew-on-Menu and ContentRedirectionModule are separately built components. Do not assume that C globals are shared or that their debug messages form a coherent timestamped trace. A source-pinned integration needs an authenticated trace channel and one monotonically ordered session, or it must explicitly remain unproven.
+6. Flush the in-memory buffer only from a safe context outside the intercepted FS critical path, in a dedicated diagnostic-only run. Never introduce recursive SD file operations inside an `FSWrapper` call or add a second competing `SAVEInit` hook.
+
+The current upstream source inspected here is a reference, **not yet identified as byte-matching the version installed on the user's Wii U**. Hardware activation remains prohibited pending implementation and source verification.
