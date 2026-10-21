@@ -1,0 +1,88 @@
+name: WULP v1.3.5 hardware-read probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wulp-v135-hardware-probe.yml
+      - tools/build_v135_probe.py
+      - tools/v135_probe_report.py
+      - tools/v135_capture_udp.py
+      - src/v134_physical_source.h
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-probe:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin upstream and apply filtered read probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v135_probe.py tools/v135_probe_report.py tools/v135_capture_udp.py
+          git clone https://github.com/wiiu-env/ContentRedirectionModule.git upstream
+          git -C upstream checkout 31b319b6b4370caf4ab173f0db91cf838c6819d0
+          python3 tools/build_v135_probe.py upstream
+          grep -q 'WULP135' upstream/src/FSWrapper.cpp
+          grep -q 'wulpBarista' upstream/src/FileInfo.h
+      - name: Native PC-side report smoke test
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from tools.v135_probe_report import analyze, fnv64
+          data = bytes([i % 251 for i in range(130116)])
+          stamp = fnv64(data[:128])
+          trace = (
+              "[WULP135] seq=1 event=OPEN handle=30000000 source=SD_REDIRECT_ACCOUNT_SAVE\n"
+              f"[WULP135] seq=2 event=READ handle=30000000 offset=0 length=128 fnv64={stamp}\n"
+              "[WULP135] seq=3 event=CLOSE handle=30000000 status=OK\n"
+          )
+          result = analyze(trace, data)
+          assert result["verdict"] == "MATCHING_REDIRECTED_MENU_READ_OBSERVED", result
+          assert result["matching_unique_bytes"] == 128
+          assert analyze(trace.replace(stamp, "0000000000000000"), data)["verdict"] == "TRACE_MISMATCH_OR_INVALID"
+          print("PASS: hardware-report parser synthetic smoke")
+          PY
+      - name: Build diagnostic module with upstream Docker toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v135-builder
+          docker run --rm -v "$PWD/upstream:/project" wulp-v135-builder make DEBUG=1 -j2
+          test -s upstream/ContentRedirectionModule.wms
+      - name: Prepare installable artifact (no saves included)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/ContentRedirectionModule.wms dist/ContentRedirectionModule-WULP-v135-DIAGNOSTIC.wms
+          cp tools/v135_capture_udp.py tools/v135_probe_report.py dist/
+          (cd dist && sha256sum ContentRedirectionModule-WULP-v135-DIAGNOSTIC.wms > SHA256SUMS)
+          cat > dist/READ_ME_FIRST.txt <<'EOF'
+          WULP v1.3.5 diagnostic ContentRedirectionModule.
+          PINNED UPSTREAM: wiiu-env/ContentRedirectionModule at 31b319b6b4370caf4ab173f0db91cf838c6819d0.
+          Experimental hardware logging ONLY. Adds no writes to Barista or allowlist.
+          BACK UP the currently working ContentRedirectionModule.wms BEFORE replacing it.
+          Use only in Aroma on a recoverable SD setup, console fully powered off.
+          This experimental build has NOT been tested on the owner's console.
+          Rename the diagnostic file to ContentRedirectionModule.wms before copying it to
+          sd:/wiiu/environments/aroma/modules/ (the module filename must match).
+          If Menu does not boot correctly: power off, restore original WMS on SD from PC.
+          Run v135_capture_udp.py on PC BEFORE boot to capture filtered event logs.
+          UDP fallback port 4405 requires LoggingModule not to have captured output instead.
+          If UDP captures nothing, check the console's existing LoggingModule logging path.
+          Never upload raw unfiltered logs or private Barista save files.
+          Generate v135-sanitized-report.json with v135_probe_report.py.
+          This does NOT deploy the 277-game profile.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v135-WiiU-Hardware-Read-Probe
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
