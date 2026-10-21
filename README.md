@@ -42,6 +42,12 @@ This experimental build instruments the *existing* ContentRedirectionModule's su
 
 The one-boot capture and private-backup comparison have been completed. The diagnostic module should be rolled back to the original module. Details: [October 21 checkpoint](docs/V136_HARDWARE_AND_OFFLINE_CHECKPOINT_2026-10-21.md). Next is an offline paired staging and rollback prototype; **do not install the 277-game candidate**.
 
+### v1.3.8 integrated Homebrew-on-Menu Wii U WUPS alpha (compiled)
+
+**[Compiled build passed](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/39681354740)**. The 238664-byte PowerPC `.wps` integrates opt-in profile directory selection in the pinned Homebrew-on-Menu SaveRedirection code, matches the 277-game / 284-entry WLPA pair, and applies the same selection in MCP title filtering. Invalid or absent profile inputs fall back to the legacy redirect. **No real 277-game hardware activation or write-persistence test has passed yet.** Existing v0.8 hooks may conflict, and title enumeration completeness is not yet established. Do not treat this as a safe permanent multi-profile release. [Engineering status and rollback limitations](docs/V138_INTEGRATED_PLUGIN_2026-10-21.md).
+
+The historical 277-game v1.2 preview, 511-title inventory and audit were recovered privately and cross-checked. No private account save, Title IDs, or owner inventory is in this public repository.
+
 ### v1.3.7 immutable profile selection (PC and portable C tests only)
 
 The host-side immutable-profile lab and portable C selection gate passed **36 tests** (including 7 native-C tests). The architecture selects a previously validated Barista/WLPA directory through one marker and falls back to the unmodified legacy redirect when input verification fails. A revert to legacy does not depend on candidate health. **No v1.3.7 WUPS binary, real two-profile Menu switching, or FAT32 power-loss validation exists yet.** [Checkpoint and integration gate](docs/V137_IMMUTABLE_PROFILE_GATE_2026-10-21.md).
