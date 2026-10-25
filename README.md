@@ -1,4 +1,8 @@
-# Wii U Library Profiles (WULP)
+# Wii U Library Profiles
+
+> **Hardware incident (2026-10-25):** The 277-game profile displayed on the first v1.3.11d boot, but **did not persist**. On reboot NES titles reappeared, the Menu reached 300 icons and four blank white pages were observed. [Regression and recovery procedure](docs/V141D_REBOOT_REGRESSION_2026-10-25.md). The v1.3.11d plugin is **not stable**. Do not repeat activation until the post-reboot save is captured and pretest plugin restored.
+
+ (WULP)
 
 **Experimental Wii U library/profile research. No production-ready multi-profile installer.**
 
