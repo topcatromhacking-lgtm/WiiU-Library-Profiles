@@ -1,0 +1,54 @@
+name: WULP v1.3.12 reboot persistence guard
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wulp-v142-persistence-guard.yml
+      - tools/build_v142_homp.py
+      - tests/test_v142_working.cpp
+      - src/wulp_v142_working_gate.h
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline native regression and pinned source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v138_homp.py tools/build_v140_homp.py tools/build_v141_homp.py tools/build_v142_homp.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v140_working.cpp -o /tmp/w140 && /tmp/w140
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v142_working.cpp -o /tmp/w142 && /tmp/w142
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v142_homp.py upstream
+          grep -q 'LegacyBaristaReference.dat' upstream/src/SaveRedirection.cpp
+          grep -q 'event=SAFE_FILTER_LEGACY' upstream/src/SaveRedirection.cpp
+          grep -q 'if (gWulp142FilterActive)' upstream/src/main.cpp
+          grep -q 'if (gWulp142FilterActive &&' upstream/src/main.cpp
+          ! grep -q 'if (gWulp138Extended)' upstream/src/main.cpp
+          ! grep -q 'if (gWulp138Extended &&' upstream/src/main.cpp
+      - name: Build Wii U WUPS module (no owner files)
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v142
+          docker run --rm -v "$PWD/upstream:/project" wulp-v142 make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Package code-only hardware candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v142-PERSISTENCE-GUARD.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf '%s\n' 'v142 requires matching PC-recovery LegacyBaristaReference.dat staged to the immutable reference directory before install.' 'DO NOT copy this WUPS directly over a v141d live console without postboot snapshot and recovery.' > dist/DO_NOT_INSTALL_WITHOUT_RECOVERY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v142-Persistence-Guard-Code-Only
+          path: dist/
+          retention-days: 30
