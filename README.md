@@ -1,6 +1,6 @@
 # Wii U Library Profiles
 
-> **Latest hardware result (2026-10-25): WULP v1.3.14 displayed the selected 277 games on the initial boot AND preserved the selection after one cold boot.** [Hardware milestone](docs/V144_FIRST_COLD_BOOT_PASS_2026-10-25.md). Second cold boot, launch/return on v144, page-layout checks and profile switching remain to be tested. Previous [v141d](docs/V141D_REBOOT_REGRESSION_2026-10-25.md) and [v142a](docs/V144_TWO_BYTE_COLD_BOOT_REGRESSION_2026-10-25.md) failed reboot persistence. Keep the private PC recovery; do not reset or overwrite Menu saves. Future Windows script SD root defaults to `E:/`, manually editable.
+> **Hardware milestone (2026-10-25): WULP v1.3.14 retained the same 277-game selection and icon order through THREE cold boots and game launch/return on actual Wii U hardware.** [Hardware record](docs/V144_FIRST_COLD_BOOT_PASS_2026-10-25.md). This validates current **single-profile** persistence, not yet switching between profiles. Earlier [v141d](docs/V141D_REBOOT_REGRESSION_2026-10-25.md) and [v142a](docs/V144_TWO_BYTE_COLD_BOOT_REGRESSION_2026-10-25.md) failed reboot persistence. Keep all private PC recovery files and don't replace the proven v144 plugin during development of switching. **SD root default for future scripts: `E:/`, manually editable.**
 
 
 
