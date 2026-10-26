@@ -1,0 +1,46 @@
+name: WULP v1.3.14 bounded metadata cold-boot candidate
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/wulp_v144_working_gate.h
+      - tests/test_v144_working.cpp
+      - tools/build_v144_homp.py
+      - .github/workflows/wulp-v144-coldboot.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native validation and source pin
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v144_homp.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v140_working.cpp -o /tmp/t140 && /tmp/t140
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v142_working.cpp -o /tmp/t142 && /tmp/t142
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v144_working.cpp -o /tmp/t144 && /tmp/t144
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v144_homp.py upstream
+          grep -q 'w144_working_gate' upstream/src/SaveRedirection.cpp
+          grep -q 'gWulp142FilterActive' upstream/src/main.cpp
+          grep -q 'SD_READY_RECOVERED_AT_SAVEINIT' upstream/src/SaveRedirection.cpp
+          grep -q 'LegacyBaristaReference.dat' upstream/src/SaveRedirection.cpp
+      - name: Build console module
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v144
+          docker run --rm -v "$PWD/upstream:/project" wulp-v144 make DEBUG=1 -j2
+          mkdir dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v144-COLD-BOOT-BETA.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf 'Compile only: no private save or installer. Do not install without backup and guarded upgrade.\n' > dist/READ_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v144-Bounded-Metadata-Coldboot-Beta
+          path: dist/
+          retention-days: 30
