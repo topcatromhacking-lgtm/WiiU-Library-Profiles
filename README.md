@@ -1,12 +1,11 @@
 # Wii U Library Profiles
 
-> **Current hardware status (2026-10-25):** 277-game profile displays and survives game launch/return, but v1.3.12a failed a second **cold boot** due to two accumulating opaque Barista metadata bytes. [WULP v1.3.14 candidate and findings](docs/V144_TWO_BYTE_COLD_BOOT_REGRESSION_2026-10-25.md) are compiled and offline-tested; **physical cold-boot persistence is not yet confirmed**. Owner-private PC recovery must be kept; do not reset Menu or overwrite live Barista files.
+> **Latest hardware result (2026-10-25): WULP v1.3.14 displayed the selected 277 games on the initial boot AND preserved the selection after one cold boot.** [Hardware milestone](docs/V144_FIRST_COLD_BOOT_PASS_2026-10-25.md). Second cold boot, launch/return on v144, page-layout checks and profile switching remain to be tested. Previous [v141d](docs/V141D_REBOOT_REGRESSION_2026-10-25.md) and [v142a](docs/V144_TWO_BYTE_COLD_BOOT_REGRESSION_2026-10-25.md) failed reboot persistence. Keep the private PC recovery; do not reset or overwrite Menu saves. Future Windows script SD root defaults to `E:/`, manually editable.
 
 
 
 > **Hardware incident (2026-10-25):** The 277-game profile displayed on the first v1.3.11d boot, but **did not persist**. On reboot NES titles reappeared, the Menu reached 300 icons and four blank white pages were observed. [Regression and recovery procedure](docs/V141D_REBOOT_REGRESSION_2026-10-25.md). The v1.3.11d plugin is **not stable**. Do not repeat activation until the post-reboot save is captured and pretest plugin restored.
 
- (WULP)
 
 **Experimental Wii U library/profile research. No production-ready multi-profile installer.**
 
