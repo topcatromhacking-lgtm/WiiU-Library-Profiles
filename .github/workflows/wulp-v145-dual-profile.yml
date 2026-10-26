@@ -1,0 +1,52 @@
+name: WULP v1.3.15 isolated dual-profile Wii U build
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/wulp_v145_dual_gate.h
+      - tools/build_v145_homp.py
+      - tests/test_v145_dual_gate.cpp
+      - .github/workflows/wulp-v145-dual-profile.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native reference validation and source check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v145_homp.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v144_working.cpp -o /tmp/v144 && /tmp/v144
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v145_dual_gate.cpp -o /tmp/v145 && /tmp/v145
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v145_homp.py upstream
+          grep -q 'wulp145TrySelected' upstream/src/SaveRedirection.cpp
+          grep -q 'W145_LEGACY_ALLOW' upstream/src/SaveRedirection.cpp
+          grep -q 'gWulp145AllowedCount' upstream/src/main.cpp
+          grep -q 'w144_working_gate' upstream/src/SaveRedirection.cpp
+      - name: Wii U console build
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v145
+          docker run --rm -v "$PWD/upstream:/project" wulp-v145 make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Code-only build artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v145-DUAL-PROFILE.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf '%s\n' 'NOT FOR DIRECT INSTALL: use private guarded v145 stage and verified 141-game PC backup.' > dist/DO_NOT_INSTALL_DIRECTLY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v145-Dual-Profile-Experimental
+          path: dist/
+          retention-days: 30
