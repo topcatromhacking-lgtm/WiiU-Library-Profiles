@@ -1,0 +1,42 @@
+name: WULP v1.3.13 cold-boot instrumented research build
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/build_v143_homp.py
+      - .github/workflows/wulp-v143-coldboot-trace.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source patch and portable gate
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v143_homp.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I src tests/test_v142_working.cpp -o /tmp/test_wulp143
+          /tmp/test_wulp143
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v143_homp.py upstream
+          grep -q 'SD_READY_RECOVERED_AT_SAVEINIT' upstream/src/SaveRedirection.cpp
+          grep -q 'SD_STATE_AFTER_INIT' upstream/src/main.cpp
+          grep -q 'SAFE_FILTER_LEGACY' upstream/src/SaveRedirection.cpp
+      - name: Build research-only Wii U WUPS
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v143
+          docker run --rm -v "$PWD/upstream:/project" wulp-v143 make DEBUG=1 -j2
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v143-COLD-BOOT-RESEARCH.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf 'NOT READY FOR HARDWARE INSTALLATION. Capture actual postcold SD evidence first.\n' > dist/DO_NOT_INSTALL_YET.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v143-ColdBoot-Research-DoNotInstall
+          path: dist/
+          retention-days: 30
