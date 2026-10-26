@@ -25,3 +25,15 @@ Before issuing another build, use the installed v144:
 4. Only then perform profile switching and longer-term persistence tests with backed-up SD data.
 
 No reinstall, new PC-only synthetic test or Barista modification is needed for this next milestone.
+
+## Later owner update — third cold boot and game return PASS
+
+The owner subsequently reported **277 games after the third full cold boot, with no change in icon order**. The owner also launched a game and returned to the Wii U Menu: **277 games remained, with no change in icon order**.
+
+Accordingly, v1.3.14 **passes the single-profile hardware persistence milestone** for the observed 277-game selection. This is grounded in on-console owner testing, not PC simulation. Other behaviors such as changing between profiles, Menu folder editing, title deletion, altered SD media, multiple accounts, and long-term metadata drift remain untested. The report did not explicitly enumerate white pages or unauthorized NES titles; do not claim individual visual checks that weren't reported.
+
+### Next engineering target: profile switching without undoing the proven state
+
+**Do not implement the legacy switch as a bare marker flip.** In v144 the integrated MCP filter is explicitly active only when the extended marker + paired immutable reference validate; a legacy marker removes that filter and risks exposing the full unselected game library. The live legacy Barista was also mutated during earlier fallback boots and must not be assumed to equal the original 141-icon layout.
+
+Safe switching must keep the current v144 277-game golden/working/allowlist unchanged, reconstruct the legacy profile from the existing PC pretest recovery, pair it with a verified 141-game title allowlist, and pre-validate both destination saves before changing one selector. Restore the old plugin/filters only through the existing protected rollback workflow. New Windows tools should default to `E:/`, with a user-editable SD root override.
