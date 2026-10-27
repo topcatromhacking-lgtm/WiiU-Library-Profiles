@@ -1,0 +1,68 @@
+name: WULP 146 native console class configuration UI
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/build_v146_class_ui.py
+      - .github/workflows/wulp-v146-class-ui.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare pinned native UI variant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v146_class_ui.py
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v146_class_ui.py upstream
+          python3 - <<'PY'
+          from pathlib import Path
+          cpp = Path('upstream/src/main.cpp').read_text()
+          save = Path('upstream/src/SaveRedirection.cpp').read_text()
+          for label in ['Wii U (140)', 'Wii (32)', 'Nintendo DS (31)', 'Game Boy Advance (74)']:
+              assert cpp.count('"'+label+'"') == 1, label
+          assert cpp.count('WUPSConfigItemBoolean::Create(WULP146_UI_') == 4
+          assert cpp.count('WUPSStorageAPI::GetOrStoreDefault(WULP146_UI_') == 4
+          assert cpp.count('WUPSStorageAPI::Store(WULP146_UI_') == 4
+          assert cpp.count('std::move(platforms)') == 1
+          assert 'gWulp145AllowedCount' in cpp and 'wulp145TrySelected' in save
+          assert 'w144_working_gate' in save and 'w145_legacy_working_gate' in save
+          assert 'wulp146UiWIIU' not in save
+          # Do not connect checkbox selections to title filter in this UI milestone.
+          mcp = cpp.split('DECL_FUNCTION(int32_t, MCP_TitleList,')[1].split('DECL_FUNCTION(int32_t, ACPCheckTitleLaunchByTitleListTypeEx')[0]
+          assert 'gWulp146Ui' not in mcp
+          assert 'gWulp145AllowedCount' in mcp
+          print('WULP146 native platform UI structure verified; v145 filtering preserved.')
+          PY
+      - name: Compile Wii U plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v146-ui
+          docker run --rm -v "$PWD/upstream:/project" wulp-v146-ui make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Pack UI-only beta
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v146-CLASS-UI.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf '%s\n' \
+            'EXPERIMENTAL UI ONLY. Keep the proven v145a plugin and recovery.' \
+            'All four class checkboxes default ON. Values save to WUPS Storage.' \
+            'UI choices do NOT YET change the Menu title list or Barista icons.' \
+            'Do not install directly; use a guarded private upgrade/rollback.' \
+            > dist/READ_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v146-Four-Console-Class-UI-Research
+          path: dist/
+          retention-days: 30
