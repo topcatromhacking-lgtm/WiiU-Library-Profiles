@@ -51,7 +51,8 @@ static inline bool w147_pair_gate(const uint8_t *base,size_t bn,
     if(!base||!catalogBytes||!marker||!gold||!wlpa||!output||!outCount||
        bn!=W138_BARISTA||gn!=W138_BARISTA||mask>14u||mn>W147_PAIR_MAX||
        wn>W147_MAX_WLPA || wn<48u) return false;
-    W146Entry entries[W146_MAX_CLASSIFIED];unsigned nc=0;
+    if(catalogLen!=16u+W147_GAMES*W146_ENTRY_BYTES)return false;
+    W146Entry entries[W147_GAMES];unsigned nc=0;
     if(!w146_parse_catalog(catalogBytes,catalogLen,entries,&nc)||
        !w147_catalog_matches_parent(base,bn,entries,nc))return false;
     const unsigned games=w147_count_for_mask(mask);
