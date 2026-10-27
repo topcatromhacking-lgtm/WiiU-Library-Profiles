@@ -27,7 +27,7 @@ The current counts are: Wii U only 140, Wii only 32, NDS only 31, GBA only 74; n
 - Native host compiled validator against all 15 templates generated from the actual owner-supplied historical 277 selection: **PASS**.
 - Negative cases: corrupted manifest, corrupted catalog CRC, modified Title ID/layout, and 33 changed opaque metadata bytes: **REJECTED**.
 - PC-powered-off deployment rehearsal: stage all 15 templates, leave extended277 selected, read-only checks, restore exact v145a plugin with no Barista/allowlist overwrites: **PASS**. Two legitimate Menu metadata changes remain accepted.
-- [Wii U CI compiled](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/40568180969): **SUCCESS**. WUPS binary 255114 bytes; SHA-256 `4a9669463c27462de58ab7f0a168f077869f2c208ca4faa817d5080e106d3bfa`.
+- [Wii U CI compiled](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/40569130014): **SUCCESS**. WUPS binary 254828 bytes; SHA-256 `0eb03f944e86081ae87f1e02a4105dd9d9165f45699305788414bff6a5fc2ea2`.
 - Wii U hardware with mixed-platform checkbox selections: **NOT YET TESTED**.
 
 ## Owner-only guarded install
