@@ -107,7 +107,7 @@ def apply(upstream: Path) -> None:
     # For UI-only experiment there is *no* use of gWulp146Ui in the MCP or
     # Barista paths; hooking it now risks breaking proven v144/v145 booting.
     for platform, _, _, _ in CLASSES:
-        if len(re.findall(r"\\bgWulp146Ui" + platform + r"\\b", code)) != 5:
+        if len(re.findall(r"(?<![A-Za-z0-9_])gWulp146Ui" + platform + r"(?![A-Za-z0-9_])", code)) != 5:
             raise RuntimeError(f"Unexpected UI field usage: {platform}")
     path.write_text(code, encoding="utf-8")
     print("WULP146 four-class configuration UI patched; "
