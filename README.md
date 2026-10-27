@@ -7,7 +7,7 @@
 > **Hardware incident (2026-10-25):** The 277-game profile displayed on the first v1.3.11d boot, but **did not persist**. On reboot NES titles reappeared, the Menu reached 300 icons and four blank white pages were observed. [Regression and recovery procedure](docs/V141D_REBOOT_REGRESSION_2026-10-25.md). The v1.3.11d plugin is **not stable**. Do not repeat activation until the post-reboot save is captured and pretest plugin restored.
 
 
-**Experimental Wii U library/profile research. No production-ready multi-profile installer.**
+**Hardware confirmed:** 277 → 141 → 277 profile round-trip under v1.3.15a (per owner report), in addition to v1.3.14's three stable cold boots. **Next:** [v1.3.16 native console-class checkbox UI](docs/V146_CONSOLE_CLASS_CHECKBOX_UI_2026-10-27.md) with four all-on-by-default toggles (Wii U 140 / Wii 32 / DS 31 / GBA 74), compiled for WUPS. **UI-only:** the checkbox values persist but do not yet change title filtering or Barista layout. Preserve the known-good v145a plugin while class filtering is integrated.\n\n**Experimental Wii U library/profile research. No production-ready multi-profile installer.**
 
 ## v1.3.2 attestation archive
 
