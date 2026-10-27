@@ -6,6 +6,7 @@ This builds an experimental WUPS plugin so checkbox UI can be exercised first.
 """
 from __future__ import annotations
 import argparse
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -106,7 +107,7 @@ def apply(upstream: Path) -> None:
     # For UI-only experiment there is *no* use of gWulp146Ui in the MCP or
     # Barista paths; hooking it now risks breaking proven v144/v145 booting.
     for platform, _, _, _ in CLASSES:
-        if code.count(f"gWulp146Ui{platform}") != 5:
+        if len(re.findall(r"\\bgWulp146Ui" + platform + r"\\b", code)) != 5:
             raise RuntimeError(f"Unexpected UI field usage: {platform}")
     path.write_text(code, encoding="utf-8")
     print("WULP146 four-class configuration UI patched; "
