@@ -34,3 +34,7 @@ Build a title-ID-to-class map for the exact 277 allowed titles. Compose the enab
 ## Test scope
 
 The automated WUPS native compile and source checks verify the UI and that existing selection hooks remain untouched. Actual Wii U UI navigation and appearance require a hardware test; UI-driven game filtering is explicitly not implemented or claimed for this version.
+
+## Compilation outcome (2026-10-27)
+
+**SUCCESS** — [pinned Wii U native plugin CI](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/40565050946), compiled executable `homebrew_on_menu-WULP-v146-CLASS-UI.wps`, **249,139 bytes**, SHA-256 `aa74beed789aa765729c5b7da4f781f0a04a507e2ac61ae27b781f281e04320f`. This is a **code-only experimental build**; it has not been installed or navigated on owner hardware, and a guarded replacement of v145a is not included in the code-only artifact. The four persistent UI toggles are implemented and the 141/277 runtime filter has not been changed. Source patch `tools/build_v146_class_ui.py` and native compile passed.
