@@ -1,0 +1,59 @@
+name: WULP v1.3.17 verified platform class checkbox filter
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/wulp_v147_class_profiles.h
+      - tools/build_v147_platform_filter.py
+      - .github/workflows/wulp-v147-platform-filter.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build from original Homebrew-on-Menu source and assert integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v146_class_ui.py tools/build_v147_platform_filter.py
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v147_platform_filter.py upstream
+          python3 - <<'PY'
+          from pathlib import Path
+          m=Path('upstream/src/main.cpp').read_text()
+          s=Path('upstream/src/SaveRedirection.cpp').read_text()
+          assert m.count('WUPSConfigItemBoolean::Create(WULP146_UI_')==4
+          assert m.count('WUPSStorageAPI::GetOrStoreDefault(WULP146_UI_')==4
+          assert m.count('WUPSStorageAPI::Store(WULP146_UI_')==4
+          assert 'prevWulp146UiWIIU!=gWulp146UiWIIU' in m
+          assert 'wulp147TryClasses(selectedDir)' in s
+          assert 'w147_pair_gate' in s and 'w147_working_gate' in s
+          assert 'wulp145TrySelected' in s
+          assert 'w144_working_gate' in s
+          assert 'gWulp145AllowedCount' in m
+          print('UI/MCP/Barista structure passed')
+          PY
+      - name: Compile for Wii U
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v147
+          docker run --rm -v "$PWD/upstream:/project" wulp-v147 make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Pack compiled module only
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v147-CLASS-FILTER.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          echo 'Install only with guarded PC staging of 15 paired mask templates and v145a rollback.' > dist/READ_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v147-Platform-Class-Filter-Compiled
+          path: dist/
+          retention-days: 30
