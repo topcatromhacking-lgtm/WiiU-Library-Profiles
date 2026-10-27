@@ -73,11 +73,11 @@ def apply(root):
            "bool prevHideAllRPX             = false;\n"
            "bool prevWulp146UiWIIU=true,prevWulp146UiWII=true,prevWulp146UiNDS=true,prevWulp146UiGBA=true;",
            "previous mask state")
-    s=once(s,"    prevHideAllRPX             = gHideAllRPX;",
+    assert s.count("    prevHideAllRPX             = gHideAllRPX;")==2, "startup+menu-close anchors"\n    s=s.replace("    prevHideAllRPX             = gHideAllRPX;",
            "    prevHideAllRPX             = gHideAllRPX;\n"
            "    prevWulp146UiWIIU=gWulp146UiWIIU;prevWulp146UiWII=gWulp146UiWII;\n"
            "    prevWulp146UiNDS=gWulp146UiNDS;prevWulp146UiGBA=gWulp146UiGBA;",
-           "startup prior mask values")
+           1)
     old="if (prevHideValue != gHideHomebrew || prevPreferWUHBOverRPXValue != gPreferWUHBOverRPX || prevHideAllRPX != gHideAllRPX) {"
     new=(old[:-3]+" ||\n"
          "        prevWulp146UiWIIU!=gWulp146UiWIIU || prevWulp146UiWII!=gWulp146UiWII ||\n"
