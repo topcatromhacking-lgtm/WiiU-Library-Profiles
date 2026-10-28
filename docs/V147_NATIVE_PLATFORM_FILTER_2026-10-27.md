@@ -1,6 +1,6 @@
 # WULP v1.3.17 — platform-class checkboxes now drive Menu filtering
 
-**2026-10-27: Wii U binary compiled and offline tests passed. Console test pending.**
+**2026-10-27: Wii U binary compiled; offline tests passed; native GBA-only checkbox filtering passed on real Wii U hardware.**
 
 ## Scope
 
@@ -28,7 +28,8 @@ The current counts are: Wii U only 140, Wii only 32, NDS only 31, GBA only 74; n
 - Negative cases: corrupted manifest, corrupted catalog CRC, modified Title ID/layout, and 33 changed opaque metadata bytes: **REJECTED**.
 - PC-powered-off deployment rehearsal: stage all 15 templates, leave extended277 selected, read-only checks, restore exact v145a plugin with no Barista/allowlist overwrites: **PASS**. Two legitimate Menu metadata changes remain accepted.
 - [Wii U CI compiled](https://github.com/topcatromhacking-lgtm/WiiU-Library-Profiles/actions/runs/40569130014): **SUCCESS**. WUPS binary 254828 bytes; SHA-256 `0eb03f944e86081ae87f1e02a4105dd9d9165f45699305788414bff6a5fc2ea2`.
-- Wii U hardware with mixed-platform checkbox selections: **NOT YET TESTED**.
+- Wii U hardware: owner located the native Aroma configuration page and disabled Wii U, Wii and NDS while enabling GBA; the Wii U Menu showed **only GBA games**: **PASS (first class-mask hardware test)**. The precise 74-game count and 15 protected icons were not separately enumerated in the owner's report.
+- All four classes restored from UI, mixed-platform checkbox combinations, and class-selection cold-boot persistence: **NOT YET REPORTED**.
 
 ## Owner-only guarded install
 
@@ -38,4 +39,4 @@ Power Wii U completely off, connect SD to Windows PC, then run `STAGE_CLASS_FILT
 
 First hardware validation: verify all ON → 277 games in correct order. In Aroma plugin config, leave only GBA checked → expect 74 games and protected icons after Menu restart; restore all four → expect original 277, then verify cold boot. If anomalous, power down and use `ROLLBACK_TO_V145.cmd`.
 
-This is a **functional hardware candidate**, not a confirmed working on-console filter.
+This is now a **partially hardware-validated functional filter**: GBA-only selection works on the console. Further class-mask permutations and restoration to all 277 titles are pending.
