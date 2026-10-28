@@ -1,0 +1,78 @@
+name: WULP v1.3.18 alphabetical classes and Wonderful 101
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/wulp_v148_sorted.h
+      - tools/build_v148_alphabetical.py
+      - .github/workflows/wulp-v148-alphabetical.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host verify portable 278-title validator and pinned patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v148_alphabetical.py
+          g++ -x c++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc -o /tmp/v148-smoke - <<'CPP'
+          #include "wulp_v148_sorted.h"
+          #include <cassert>
+          int main(){
+            assert(w148_mask_count(0)==0);
+            assert(w148_mask_count(1)==141);
+            assert(w148_mask_count(2)==32);
+            assert(w148_mask_count(4)==31);
+            assert(w148_mask_count(8)==74);
+            assert(w148_mask_count(9)==215);
+            assert(w148_mask_count(15)==278);
+          }
+          CPP
+          /tmp/v148-smoke
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v148_alphabetical.py upstream
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('upstream/src/SaveRedirection.cpp').read_text()
+          m=Path('upstream/src/main.cpp').read_text()
+          assert 'wulp148TryAlphabetical(selectedDir);' in s
+          assert 'w148_pair_gate' in s and 'w148_working_gate' in s
+          assert 'uint64_t gWulp138AllowedIds[285] = {};' in s
+          assert 'extern uint64_t gWulp138AllowedIds[285];' in m
+          assert '"Wii U (141)"' in m
+          assert m.count('WUPSConfigItemBoolean::Create(WULP146_UI_')==4
+          assert 'wulp145TrySelected' in s and 'wulp147TryClasses' in s
+          assert 'w144_working_gate' in s
+          print('WULP148 source verification passed')
+          PY
+      - name: Compile Wii U plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v148
+          docker run --rm -v "$PWD/upstream:/project" wulp-v148 make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Ship code-only executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v148-ALPHABETICAL.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf '%s\n' \
+            'CODE ONLY: do not copy directly to SD.' \
+            'Requires 16 complete 278-title alphabetical Barista + WLPA profiles' \
+            'and owner-private original141/extended277 source references.' \
+            'Install using the separate private guarded staging tool with v147 rollback.' \
+            > dist/READ_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v148-Alphabetical-278-Compiled
+          path: dist/
+          retention-days: 30
