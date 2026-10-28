@@ -1,5 +1,6 @@
 # Wii U Library Profiles
 
+> **WULP v1.3.18 candidate:** [Alphabetical platform-class filtering and The Wonderful 101 restored](docs/V148_ALPHABETICAL_WONDERFUL101_2026-10-27.md). All four classes now total **278 games** (141 Wii U + 32 Wii + 31 DS + 74 GBA); native plugin CI and owner-private offline profile verification passed. Preserves the owner-tested v1.3.17 plugin for exact rollback. New 278-game hardware boot still pending.\n\n
 > **Hardware milestone (2026-10-25): WULP v1.3.14 retained the same 277-game selection and icon order through THREE cold boots and game launch/return on actual Wii U hardware.** [Hardware record](docs/V144_FIRST_COLD_BOOT_PASS_2026-10-25.md). This validates current **single-profile** persistence, not yet switching between profiles. Earlier [v141d](docs/V141D_REBOOT_REGRESSION_2026-10-25.md) and [v142a](docs/V144_TWO_BYTE_COLD_BOOT_REGRESSION_2026-10-25.md) failed reboot persistence. Keep all private PC recovery files and don't replace the proven v144 plugin during development of switching. **SD root default for future scripts: `E:/`, manually editable.** **Next experimental work:** [v1.3.15 dual-profile selector](docs/V145_DUAL_PROFILE_EXPERIMENT_2026-10-25.md) adds a separate 141-game Barista and 148-title allowlist while preserving v144's proven 277 profile. Compiled and PC-tested; hardware switching not yet verified.
 
 
