@@ -1,0 +1,81 @@
+name: WULP v1.3.19 nine classes with 285-game Menu cap
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/wulp_v149_nine.h
+      - tools/build_v149_nine.py
+      - .github/workflows/wulp-v149-nine.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test nine-class capacity and pinned patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/build_v149_nine.py
+          g++ -x c++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc -o /tmp/test149 - <<'CPP'
+          #include "wulp_v149_nine.h"
+          #include <cassert>
+          int main(){
+            assert(w149_total(0)==0 && w149_shown(0)==0);
+            assert(w149_total(15)==278 && w149_shown(15)==278);
+            assert(w149_total(31)==299 && w149_shown(31)==285);
+            assert(w149_visible_class(31,4)==7);
+            assert(w149_total(511)==511 && w149_shown(511)==285);
+            assert(w149_visible_class(511,4)==7);
+            assert(w149_visible_class(511,5)==0);
+          }
+          CPP
+          /tmp/test149
+          git clone https://github.com/wiiu-env/homebrew_on_menu_plugin.git upstream
+          git -C upstream checkout c3b6d06301ba97f479da6227c8dd95bbda01d29f
+          python3 tools/build_v149_nine.py upstream
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('upstream/src/SaveRedirection.cpp').read_text()
+          m=Path('upstream/src/main.cpp').read_text()
+          assert 'wulp149TryNine(selectedDir)' in s
+          assert 'w149_pair_gate' in s and 'w149_working_gate' in s
+          assert 'gWulp138AllowedIds[292]' in s
+          assert 'wulp148TryAlphabetical(selectedDir)' in s
+          assert 'gWulp138AllowedIds[292]' in m
+          assert m.count('WUPSConfigItemBoolean::Create(WULP149_UI_')==5
+          assert m.count('WUPSConfigItemBoolean::Create(WULP146_UI_')==4
+          assert m.count('WUPSStorageAPI::GetOrStoreDefault(WULP149_UI_')==5
+          assert m.count('WUPSStorageAPI::Store(WULP149_UI_')==5
+          assert 'Only 285 games will be shown' in m
+          assert 'NotificationModule_AddInfoNotification(note)' in m
+          assert '"N64","SNES","NES","PCE","MSX"' in m
+          print('WULP149 native UI+title filter+Barista integration structure PASS')
+          PY
+      - name: Compile Wii U native plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build upstream -t wulp-v149
+          docker run --rm -v "$PWD/upstream:/project" wulp-v149 make DEBUG=1 -j2
+          test -s upstream/homebrew_on_menu.wps
+      - name: Package code-only release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp upstream/homebrew_on_menu.wps dist/homebrew_on_menu-WULP-v149-NINE-CLASS.wps
+          (cd dist && sha256sum *.wps > SHA256SUMS)
+          printf '%s\n' \
+            'Compiled Wii U plugin — CODE ONLY, not a stand-alone installer.' \
+            'Do not copy directly to SD. Requires 512 paired Barista and WLPA profiles' \
+            'generated locally from your private existing v148 owner inventory.' \
+            'Use guarded private stage and keep byte-exact v148 plugin rollback.' > dist/READ_FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WULP-v149-Nine-Classes-285-Cap-CODE-ONLY
+          path: dist/
+          retention-days: 30
