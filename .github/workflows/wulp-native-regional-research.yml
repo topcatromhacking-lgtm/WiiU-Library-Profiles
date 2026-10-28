@@ -1,0 +1,30 @@
+name: WULP native Wii U regional exclusivity research
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/research_wiiu_release_markets.py
+      - .github/workflows/wulp-native-regional-research.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis deps
+        run: pip install pandas requests lxml beautifulsoup4 html5lib
+      - name: Count native Wii U games exclusive to JP, NA, AU or Europe
+        run: python tools/research_wiiu_release_markets.py
+      - name: Export audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: WiiU-Native-Regional-Exclusives-Audit
+          path: |
+            wiiu-release-markets-audit.csv
+            wiiu-release-markets-summary.json
